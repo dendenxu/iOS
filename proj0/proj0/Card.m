@@ -34,5 +34,9 @@ It's all about managing communications between camps.
 
 @implementation Card
 
+int main(int argc, const char *argv[])
+{
+    NSLog(@"Hello, world.");
+}
 
 @end
