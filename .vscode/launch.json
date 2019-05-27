@@ -11,7 +11,6 @@
             "request": "launch",
             "program": "${workspaceFolder}/main",
             "args": [],
-            "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": true,
