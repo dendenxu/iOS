@@ -3,9 +3,9 @@
     "code-runner.executorMap": {
         "javascript": "node",
         "java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
-        "c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
-        "cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
-        "objective-c": "cd $dir && gcc -framework Cocoa $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+        "c": "cd $dir && gcc $fileName -o $fileNameWithoutExt.out && $dir$fileNameWithoutExt.out",
+        "cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt.out && $dir$fileNameWithoutExt.out",
+        "objective-c": "cd $dir && gcc -framework Cocoa $fileName -o $fileNameWithoutExt.out && $dir$fileNameWithoutExt.out",
         "php": "php",
         "python": "python -u",
         "perl": "perl",
@@ -46,4 +46,6 @@
     "editor.fontSize": 16,
     "editor.formatOnSave": true,
     "workbench.settings.useSplitJSON": true,
+    "code-runner.runInTerminal": true,
+    "git.enableSmartCommit": true,
 }
