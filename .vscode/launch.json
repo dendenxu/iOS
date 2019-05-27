@@ -9,7 +9,7 @@
             "preLaunchTask": "build",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/main",
+            "program": "${workspaceFolder}/dbg.out",
             "args": [],
             "cwd": "${workspaceFolder}",
             "environment": [],
