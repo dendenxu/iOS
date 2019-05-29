@@ -1,4 +1,5 @@
 #import "Animal.h"
+#import "Animal+Exam.h"
 
 @implementation Animal
 
@@ -21,6 +22,7 @@
 - (void)getInfo
 {
 	NSLog(@"Random Info");
+	[self howIsExam];
 }
 
 - (float)weightInKg:(float)weightInLbs
@@ -35,7 +37,17 @@
 
 - (NSString *)talkToMe:(NSString *)myName
 {
-	NSString *response = [NSString stringWithFormat:@"Hello, %s", myName];
+	NSString *response = [NSString stringWithFormat:@"Hello, %@.", myName];
+	return response;
 }
 
+- (void)moreBeautiful
+{
+	NSLog(@"%@ looks more beautiful", self.name);
+}
+
+- (void)looksBeautiful
+{
+	NSLog(@"%@ looks beautiful", self.name);
+}
 @end

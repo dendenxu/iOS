@@ -1,6 +1,7 @@
+#import "BeautyContest.h"
 #import <Foundation/Foundation.h>
 
-@interface Animal : NSObject
+@interface Animal : NSObject <BeautyContest>
 
 @property NSString *name;
 @property NSString *favFood;
@@ -12,7 +13,7 @@
 
 - (void)getInfo;
 
-- (float)weightInkg:(float)weightInLbs;
+- (float)weightInKg:(float)weightInLbs;
 
 - (NSString *)talkToMe:(NSString *)myName;
 
