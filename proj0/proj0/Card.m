@@ -28,15 +28,9 @@ It's all about managing communications between camps.
 //Properties
 #import "Card.h"
 
-@interface Card()
-
-@end
-
-@implementation Card
-
-int main(int argc, const char *argv[])
+int main()
 {
-    NSLog(@"Hello, world.");
+    NSString *n = @"Wangjunzhe";
+    NSLog(@"Hello, %@.",n);
 }
 
-@end
