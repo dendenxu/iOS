@@ -10,27 +10,38 @@ import UIKit
 
 class ViewController: UIViewController
 {
-    
+    @IBOutlet weak var flipCountLabel: UILabel!//The exclaiming mark means that the variable is an optional an is automatically unwrapped whenever used
     var flipCount = 0
     {
-        didSet
+        didSet//didSet is like the monitor of a vaiable, whenever something changes, the program does the following stuff
         {
             flipCountLabel.text = "Flip Count: \(flipCount)";
         }
     }
-    @IBOutlet weak var flipCountLabel: UILabel!
+
+    @IBOutlet var cardButtons: [UIButton]!
+    var emojiCollections = ["👻","🎃","👻","🎃"]
     
     @IBAction func touchCard(_ sender: UIButton)
     {
         flipCount+=1;
-        flipCard(withEmoji: "👻", on: sender);
+        if let cardIndex = cardButtons.firstIndex(of: sender)
+        {
+            print("cardIndex is at \(cardIndex)");
+            flipCard(withEmoji:emojiCollections[cardIndex],on:sender);
+        }
+        else
+        {
+            print("Button is not in the array");
+        }
     }
     
-    @IBAction func touchSecondCard(_ sender: UIButton)
-    {
-        flipCount+=1;
-        flipCard(withEmoji: "🎃", on: sender);
-    }
+//    @IBAction func touchSecondCard(_ sender: UIButton)
+//    {
+//        flipCount+=1;
+//        flipCard(withEmoji: "🎃", on: sender);
+//    }
+//These are duplicated codes and are really unwelcomed, should be augmented
     
     func flipCard(withEmoji emoji:String, on button:UIButton)
     {
