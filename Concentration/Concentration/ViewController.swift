@@ -8,9 +8,10 @@
 
 import UIKit
 
-class ViewController: UIViewController
+class ViewController: UIViewController//This shouldn't be changed any time soon
 {
     @IBOutlet weak var flipCountLabel: UILabel!//The exclaiming mark means that the variable is an optional an is automatically unwrapped whenever used
+    
     var flipCount = 0
     {
         didSet//didSet is like the monitor of a vaiable, whenever something changes, the program does the following stuff
@@ -20,12 +21,12 @@ class ViewController: UIViewController
     }
 
     @IBOutlet var cardButtons: [UIButton]!
-    var emojiCollections = ["👻","🎃","👻","🎃"]
+    var emojiCollections = ["👻","🎃","👻","🎃"]//omit the type specification because that is not implicit at all
     
-    @IBAction func touchCard(_ sender: UIButton)
+    @IBAction func touchCard(_ sender: UIButton)// the _ is for the caller to use
     {
         flipCount+=1;
-        if let cardIndex = cardButtons.firstIndex(of: sender)
+        if let cardIndex = cardButtons.firstIndex(of: sender)//We do that because we want swift to look like English. The if let structure tests whether the optional variable is a nil. If it is, unwarps it.
         {
             print("cardIndex is at \(cardIndex)");
             flipCard(withEmoji:emojiCollections[cardIndex],on:sender);
@@ -43,7 +44,7 @@ class ViewController: UIViewController
 //    }
 //These are duplicated codes and are really unwelcomed, should be augmented
     
-    func flipCard(withEmoji emoji:String, on button:UIButton)
+    func flipCard(withEmoji emoji:String, on button:UIButton)//We do that because we want swift to look like English
     {
         print("flipCard(withEmoji: \(emoji))");
         if button.currentTitle == emoji
