@@ -8,9 +8,16 @@
 
 import Foundation
 
-struct Card
+struct Card//every struct gets a free initializer with all its instance variables queried
 {
     var isFacedup = false;
     var isMatched = false;
     var identifier :Int;
+    
+    init(identifier:Int)
+    {
+        self.identifier = identifier;
+        //approximately self == this
+    }
+    
 };
