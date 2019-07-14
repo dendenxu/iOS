@@ -12,7 +12,7 @@ class ViewController: UIViewController//This shouldn't be changed any time soon
 {
     @IBOutlet weak var flipCountLabel: UILabel!//The exclaiming mark means that the variable is an optional an is automatically unwrapped whenever used
     
-    var game = Concentration();
+    var game = Concentration(numberOfPairsOfCards: 10);
     
     var flipCount = 0
     {
