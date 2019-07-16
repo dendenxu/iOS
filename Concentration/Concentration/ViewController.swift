@@ -10,9 +10,8 @@ import UIKit
 
 class ViewController: UIViewController//This shouldn't be changed any time soon
 {
-    @IBOutlet weak var flipCountLabel: UILabel!//The exclaiming mark means that the variable is an optional an is automatically unwrapped whenever used
     
-    var game = Concentration(numberOfPairsOfCards: 10);
+    lazy var game = Concentration(numberOfPairsOfCards: (cardButtons.count+1)/2);//var game: Concentration = Concentration();
     
     var flipCount = 0
     {
@@ -21,6 +20,8 @@ class ViewController: UIViewController//This shouldn't be changed any time soon
             flipCountLabel.text = "Flip Count: \(flipCount)";
         }
     }
+    
+    @IBOutlet weak var flipCountLabel: UILabel!//The exclaiming mark means that the variable is an optional an is automatically unwrapped whenever used
 
     @IBOutlet var cardButtons: [UIButton]!
     var emojiCollections = ["👻","🎃","👻","🎃"]//omit the type specification because that is not implicit at all
