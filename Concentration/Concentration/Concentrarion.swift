@@ -11,25 +11,53 @@ import Foundation
 class Concentration
 {
     var cards = [Card]();
-    
-    init(numberOfPairsOfCards:Int)
+    var indexOfOneAndOnlyFaceUpCard: Int?;
+    init(numberOfPairsOfCards: Int)
     {
         for _ in 1...numberOfPairsOfCards
         {
             let card = Card();
-            cards += [card,card];
+            cards += [card, card];
         }
+        cards = shuffle(theArray: cards);
     }
-    
-    func chooseCard(at index:Int)
+
+    func shuffle(theArray: [Card]) -> [Card]
     {
-        if cards[index].isFacedUp
-        {
-            cards[index].isFacedUp = false;
+        var list = theArray;
+        for index in 0..<list.count {
+            let newIndex = Int(arc4random_uniform(UInt32(list.count - index))) + index
+            if index != newIndex {
+                list.swapAt(index, newIndex);
+            }
         }
-        else
+        return list;
+    }
+
+    func chooseCard(at index: Int)
+    {
+        if !cards[index].isMatched
         {
-            cards[index].isFacedUp = true;
+            if let matchIndex = indexOfOneAndOnlyFaceUpCard, matchIndex != index
+            {
+                if cards[matchIndex].identifier == cards[index].identifier
+                {
+                    cards[matchIndex].isMatched = true;
+                    cards[index].isMatched = true;
+                }
+                cards[index].isFaceUp = true;
+                indexOfOneAndOnlyFaceUpCard = nil;
+            }
+            else
+            {
+                for flipCardIndex in cards.indices
+                {
+                    cards[flipCardIndex].isFaceUp = false;
+                }
+                cards[index].isFaceUp = true;
+                indexOfOneAndOnlyFaceUpCard = index;
+            }
         }
+
     }
 };
