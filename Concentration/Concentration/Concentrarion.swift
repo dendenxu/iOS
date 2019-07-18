@@ -8,56 +8,66 @@
 
 import Foundation
 
-class Concentration
+struct Concentration
 {
-    var cards = [Card]();
-    var indexOfOneAndOnlyFaceUpCard: Int?;
+    private(set) var cards = [Card]()
+
+    private var indexOfOneAndOnlyFaceUpCard: Int?
+    {
+        get
+        {
+            return cards.indices.filter { cards[$0].isFaceUp }.oneAndOnly
+        }
+        set
+        {
+            for index in cards.indices
+            {
+                cards[index].isFaceUp = index == newValue
+            }
+
+        }
+    }
+
     init(numberOfPairsOfCards: Int)
     {
+        assert(numberOfPairsOfCards > 0, "Concentraion.init(\(numberOfPairsOfCards)): you should have at least one pair of cards")
         for _ in 1...numberOfPairsOfCards
         {
-            let card = Card();
-            cards += [card, card];
+            let card = Card()
+            cards += [card, card]
         }
-        cards = shuffle(theArray: cards);
+        cards.shuffle()
     }
 
-    func shuffle(theArray: [Card]) -> [Card]
-    {
-        var list = theArray;
-        for index in 0..<list.count {
-            let newIndex = Int(arc4random_uniform(UInt32(list.count - index))) + index
-            if index != newIndex {
-                list.swapAt(index, newIndex);
-            }
-        }
-        return list;
-    }
 
-    func chooseCard(at index: Int)
+    mutating func chooseCard(at index: Int)
     {
+        assert(cards.indices.contains(index), "Concentraion.chooseCard(at: \(index)): chosen index out of range")
         if !cards[index].isMatched
         {
             if let matchIndex = indexOfOneAndOnlyFaceUpCard, matchIndex != index
             {
-                if cards[matchIndex].identifier == cards[index].identifier
+                if cards[matchIndex] == cards[index]
                 {
-                    cards[matchIndex].isMatched = true;
-                    cards[index].isMatched = true;
+                    cards[matchIndex].isMatched = true
+                    cards[index].isMatched = true
                 }
-                cards[index].isFaceUp = true;
-                indexOfOneAndOnlyFaceUpCard = nil;
+                cards[index].isFaceUp = true
             }
             else
             {
-                for flipCardIndex in cards.indices
-                {
-                    cards[flipCardIndex].isFaceUp = false;
-                }
-                cards[index].isFaceUp = true;
-                indexOfOneAndOnlyFaceUpCard = index;
+                indexOfOneAndOnlyFaceUpCard = index
             }
         }
 
     }
-};
+}
+
+
+extension Collection
+{
+    var oneAndOnly: Element?
+    {
+        return count == 1 ? first : nil
+    }
+}

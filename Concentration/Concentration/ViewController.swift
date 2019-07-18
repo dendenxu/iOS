@@ -11,64 +11,107 @@ import UIKit
 class ViewController: UIViewController
 {
 
-    lazy var game = Concentration(numberOfPairsOfCards: (cardButtons.count + 1) / 2);
+    
+    
+    private lazy var game = Concentration(numberOfPairsOfCards: numberOfPairsOfCards)
 
-    @IBOutlet weak var flipCountLabel: UILabel!
-    var flipCount = 0
+    var numberOfPairsOfCards: Int
+    {
+        return (cardButtons.count + 1) / 2
+    }
+
+    @IBOutlet private weak var flipCountLabel: UILabel!
     {
         didSet
         {
-            flipCountLabel.text = "Flip Count: \(flipCount)";
+            updateFlipCountLabel()
         }
     }
 
-    @IBOutlet var cardButtons: [UIButton]!
-
-    @IBAction func touchCard(_ sender: UIButton)
+    private var flipCount = 0
     {
-        flipCount += 1;
+        didSet
+        {
+            updateFlipCountLabel()
+        }
+    }
+
+    private func updateFlipCountLabel()
+    {
+        let attributes: [NSAttributedString.Key: Any] =
+            [
+                    .strokeColor: #colorLiteral(red: 1, green: 0.5763723254, blue: 0, alpha: 1),
+                    .strokeWidth: 5.0,
+            ]
+        let attribtext = NSAttributedString(string: "Flip Count: \(flipCount)", attributes: attributes)
+        flipCountLabel.attributedText = attribtext
+    }
+
+    @IBOutlet private var cardButtons: [UIButton]!
+
+    @IBAction private func touchCard(_ sender: UIButton)
+    {
+        flipCount += 1
         if let cardIndex = cardButtons.firstIndex(of: sender)
         {
-            game.chooseCard(at: cardIndex);
-            updateViewFromModel();
+            game.chooseCard(at: cardIndex)
+            updateViewFromModel()
         }
         else
         {
-            print("Button is not in the array");
+            print("Button is not in the array")
         }
     }
 
-    func updateViewFromModel()
+    private func updateViewFromModel()
     {
         for index in cardButtons.indices
         {
-            let button = cardButtons[index];
-            let card = game.cards[index];
+            let button = cardButtons[index]
+            let card = game.cards[index]
             if card.isFaceUp
             {
-                button.setTitle(emoji(for: card), for: UIControl.State.normal);
-                button.backgroundColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1);
+                button.setTitle(emoji(for: card), for: UIControl.State.normal)
+                button.backgroundColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
             }
             else
             {
-                button.setTitle("", for: UIControl.State.normal);
-                button.backgroundColor = card.isMatched ? #colorLiteral(red: 1, green: 0.5781051517, blue: 0, alpha: 0): #colorLiteral(red: 1, green: 0.5781051517, blue: 0, alpha: 1) ;
+                button.setTitle("", for: UIControl.State.normal)
+                button.backgroundColor = card.isMatched ? #colorLiteral(red: 1, green: 0.5781051517, blue: 0, alpha: 0): #colorLiteral(red: 1, green: 0.5781051517, blue: 0, alpha: 1)
             }
         }
     }
 
-    var emojiChoices = ["👻", "🎃", "🐒", "🦕", "🦀", "🐺", "🦋", "🐦", "🐙", "🦐"];
-    var emoji = [Int: String]();
-    func emoji(for card: Card) -> String
+//    private var emojiChoices = ["👻", "🎃", "🐒", "🦕", "🦀", "🐺", "🦋", "🐦", "🐙", "🦐"];
+    private var emojiChoices = "👻🎃🐒🦕🦀🐺🦋🐦🐙🦐"
+    private var emoji = [Card: String]()
+    private func emoji(for card: Card) -> String
     {
-        if emoji[card.identifier] == nil, emojiChoices.count != 0
+        if emoji[card] == nil, emojiChoices.count != 0
         {
-            let randomIndex = Int(arc4random_uniform(UInt32(emojiChoices.count)));
-            emoji[card.identifier] = emojiChoices.remove(at: randomIndex);
+            let randomStringIndex = emojiChoices.index(emojiChoices.startIndex, offsetBy: emojiChoices.count.arc4random)
+            emoji[card] = String(emojiChoices.remove(at: randomStringIndex))
         }
 
-        return emoji[card.identifier] ?? "?";
+        return emoji[card] ?? "?"
     }
-
 }
 
+extension Int
+{
+    var arc4random: Int
+    {
+        if self > 0
+        {
+            return Int(arc4random_uniform(UInt32(self)))
+        }
+        else if self < 0
+        {
+            return -Int(arc4random_uniform(UInt32(-self)))
+        }
+        else
+        {
+            return 0
+        }
+    }
+}

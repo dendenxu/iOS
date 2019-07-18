@@ -1,3 +1,7 @@
+## 注释部分备案
+
+整理后的代码详见具体文件
+
 ```swift
 //
 //  ViewController.swift
@@ -204,4 +208,573 @@ struct Card//every struct gets a free initializer with all its instance variable
 };
 
 ```
+
+## 整个`Concentration`游戏的逻辑
+
+- `Model`
+  - `Concentraion`负责成对分配卡片，打乱顺序，以及在接收到信息时对卡片做处理
+  - `Card`负责卡片信息的构建，包括`isMatched`，`isFaceUp`和`identifier`变量的创建
+- `ViewController`
+  - `ViewController`负责分配游戏
+  - 并且将Model中的`Card`概念映射到屏幕上的`Buttons`
+  - 并且以字典的形式把`Emoji`也做一一对应
+  - 三者中相互联系的部分是`Card`中的`identifier`
+
+## Tuple
+
+Tuple is very light weight.
+
+You can define a tuple using this:
+
+```swift
+let x:(String, Int, Double) = ("Hello", 5, 0.85);// In this case, the name of the three elements will be 0, 1 and 2. So it's kind of the same as let x:(0: String, 1: Int, 2: Double);
+let (Name, Age, Ratio) = x;
+print(Name);
+print(Age);
+print(Ratio);
+
+let x:(Name:String, Age: Int, Ratio: Double) = ("Mike", 14, 0.99);
+print(x.Name);
+print(x.Age);
+print(x.Ratio);
+
+```
+
+## Computed Properties
+
+Some properties of an instance is stored inside the memory, while in swift you can get them to be computed if you've found any duplication.
+
+Just use a pair of brackets and some get and set to achieve that.
+
+```swift
+// Like:
+var indexOfOneAndOnlyFaceUpCard: Int?
+{
+  get
+  {
+    var foundIndex:Int?;
+    for index in cards.indices
+    {
+      if cards[index].isFaceUp
+      {
+        if foundIndex == nil
+        {
+          foundIndex = index;
+        }
+        else
+        {
+          return nil;
+        }
+      }
+    }
+    return foundIndex;
+  }
+  set
+  {
+    for index in cards.indices
+    {
+      cards[index].isFaceUp = index == newValue;
+    }
+  }
+}
+```
+
+
+
+## Arrays Have `Shuffle`
+
+```swift
+//    func shuffle(theArray: [Card]) -> [Card]
+//    {
+//        var list = theArray;
+//        for index in 0..<list.count {
+//            let newIndex = Int(arc4random_uniform(UInt32(list.count - index))) + index
+//            if index != newIndex {
+//                list.swapAt(index, newIndex);
+//            }
+//        }
+//        return list;
+//    }
+
+// Or you can just do:
+cards.shuffle();
+```
+
+## Access Control
+
+- **internal**: this is the default, it means "usable by any object in my app or framework"
+- **private**: only callable from within this object
+- **private(set)**: the property is readable outside this object, but not settable
+- **fileprivate**: accessible by any code in this source file 
+- **public**: (for frameworks only) can be used by objects outside my framework
+- **open**: (for frameworks only) public and object outside my framework can subclass it.
+
+## Assert
+
+给出一个条件，如果不满足则让程序停止运行。并以我们想要的报错信息报错。例如：
+
+```swift
+assert(cards.indices.contains(index), "Concentraion.chooseCard(at \(index)): chosen index out of range");
+assert(numberOfPairsOfCards > 0, "Concentraion.init(\(numberOfPairsOfCards)): you should have at least one pair of cards");
+```
+
+## Extensions
+
+Adding methods or properties to a class without having to have its code. Like this:
+
+```swift
+extension Int
+{
+    var arc4random: Int
+    {
+        if self > 0
+        {
+            return Int(arc4random_uniform(UInt32(self)));
+        }
+        else if self < 0
+        {
+            return -Int(arc4random_uniform(UInt32(-self)));
+        }
+        else
+        {
+            return 0;
+        }
+    }
+}
+// By doing this, we add an extension to the class Int, which has a var arc4random of type Int.(computable property)
+// Be mindful that extentions should have memory. They can only be computed properties.
+```
+
+## Enum
+
+Can only have discrete states...
+
+```swift
+enum FastFoodMenuItem
+{
+  case hamburger(numberOfPatties: Int);
+  case fries(size: FryOrderSize);
+  case drink(String, ounces: Int);
+  case cookie;
+}
+enum FryOrderSize
+{
+  case large;
+  case small;
+}
+
+let menuItem: FastFoodMenuItem = FastFoodMenuItem.hamburger(numberOfPatties: 2);//when you set the value, it's fixed.
+// Same as var otherItem: FastFoodMenuItem = .cookie;
+// var otherItem = FastFoodMenuItem.cookie;
+var otherItem: FastFoodMenuItem = FastFoodMenuItem.cookie;
+
+// We use switch case pairs against enum
+```
+
+Using Enum's data
+
+```swift
+var menuItem = FastFoodMenuItem.cookie;
+switch menuItem
+{
+  case .hamburger: break;
+  case .fries: print("Fried");
+  default: print("other");
+}
+//multiple lines are also available
+var menuItem = FastFoodMenuItem.fries(size: .large)
+
+```
+
+Getting the associated data:
+
+```swift
+var menuItem = FastFoodMenuItem.drink("Coke", ounces: 32);
+
+switch menuItem
+{
+  case .hamburger(let pattyCount): print("A burger with \(pattyCount) patties!");
+  case .fries(let size): print("A \(size) order of fries!");
+  case .drink(let brand, let ounces): print("a \(ounces)oz \(brand)");
+  case .cookie: print("a cookie!");
+}
+// Note that local variable that retrieves the associated data can even have a different name, like in tuple when you assign it to another tuple.
+```
+
+What about Methods? And Vars?
+
+```swift
+// func yes, stored properties no
+// and you can use switch self to get your own data
+enum FastFoodMenuItem
+{
+  ...
+  func isIncludedInSpecialOrder(number: Int) -> Bool
+  {
+    switch self
+    {
+      case .hamburger(let pattyCount): return pattyCount == number;
+      case .fries, .cookie: return true;
+      case .drink(_, let ounces): return ounces == 16;
+    }
+  }
+  
+  var calories
+  {
+    get
+    {
+      ...
+    }
+    set
+    {
+      ...
+    }
+  }
+  
+  
+  // How to modify the enum
+  mutating func switchToBeingACookie()
+  {
+    self = .cookie;// this works even if self is a .hamburger or .drink
+    // Note that mutating is required because enum is a VALUE TYPE.
+  }
+}
+```
+
+## Optionals: Enum
+
+```swift
+enum Option<T>// a generic type, like Array<Element>...
+{
+  case none;
+  case some(<T>);
+}
+
+// Operators
+var hello: String?;						var hello: Optional<String> = .none;
+var hello: String? = "Hello";	var hello: Optional<String> = .some("Hello");
+var hello: String? = nil;			var hello: Optional<String> = .none;
+
+
+let hello: String? = ...;			switch hello
+print(hello!);									{
+  																case .none: //raise an exception
+  																case .some(let data): print(data);
+																}
+
+if let greeting = hello				switch hello
+{																{
+  print(greeting);								case .some(let data): print(data);
+}																	case .none:// Do something else
+else														}
+{
+  // Do something else
+}
+```
+
+
+
+## Memory Management
+
+Apple 使用ARC方法来管理内存，当没有强指针指向某个内容时，他就被清空。但对于弱指针（只能是一个Optional变量），不计入强指针的统计中，当没有其他强指针指向某一片内存时，这个弱指针就被设为nil。unowned意思是不使用ARC的方式来管理内容，我保证不错误地使用这个指针。
+
+**strong**: strong is a normal reference counting.**weak**、**unowned**
+
+## Protocols
+
+Essencially a way to express an API more concisely
+
+Just a list of var and functions. And a protocal is just a **TYPE**
+
+1. declaration of a protocal
+2. class or struct or enum declaration that makes the clain to implement the protocal
+3. the code in said class
+
+其实可以有Stored Properties，只要Protocols中的声明包括了get和set，实现它的那个类或结构就可以用Stored Properties来实现。
+
+```swift
+protocol Moveable
+{
+  mutating func move(to point: CGPoint);
+}
+class Car: Moveable
+{
+  func move(to point: CGPoint) {...}
+  func changeOil() {...}
+}
+struct Shape: Moveable
+{
+  mutating func move(to point: CGPoint) {...}
+  func draw() {...}
+}
+
+let prius: Car = Car();
+let square: Shape = Shape();
+
+var thingToMove: Moveable = prius;
+thingToMove.move(to: _)//OK
+thingToMove.changeOil()//Not OK
+thingToMove = square;
+let thingToMove:[Moveable] = [prius, square];
+
+func slide(slider: Moveable)
+{
+  let positionToSlideTo = _;
+  slider.move(to: positionToSlideTo);
+}
+slide(prius);
+slide(square);
+
+```
+
+
+
+## Delegation
+
+举个例子：
+
+```swift
+// UIScrollView has a delegate property
+weak var delegate: UIScrollViewDelegate?;
+
+// And this is probably what UIScrollViewDelegate looks like
+@objc protocol UIScrollViewDelegate
+{
+  Optional func scrollViewDidScroll(scrollView: UIScrollView);
+  Optional func viewForZooming(in scrollView: UIScrollView) -> UIView
+  ... and many more
+}
+// A Controller with a UIScrollView in its View would be declared like this ...
+class MyViewController: UIViewController, UIScrollViewDelegate{...}
+// probably in the @IBOutlet didSet for the scroll view, the Controller would do...
+scrollView.delegate = self;
+```
+
+## Dictionary
+
+其实也是一种Protocol。
+
+```swift
+protocol Equatable
+{
+  static func == (lhs: self, rhs: self) -> Bool;
+}
+protocol Hashable: Equatable
+{
+  var hashValue: Int{get}
+}
+Dictionary<Key: Hashable, Value>
+```
+
+## Multiple Inheritance
+
+You can extent your protocol and then implement your default stuff.
+
+## Functional Programming
+
+
+
+## String
+
+**Character**: The character in a String
+
+String cannot be indexed by Int
+
+Indices into Strings are therefore of a different type … String.Index.
+
+```swift
+let pizzaJoint = "café pesto";
+let firstCharacterIndex = pizzaJoint.startIndex;
+let fourthCharacterIndex = pizzaJoint.index(firstCharacterIndex, offsetBy: 3);
+
+if let firstSpace = pizzaJoint.index(of: " ")
+{
+  //return nil if " " is not found.
+  let secondWordIndex = pizzaJoint.index(firstSpace,offsetBy: 1);
+  let secondWord = pizzaJoint[secondWordIndex..<pizzaJoint.endIndex];
+}
+
+pizzaJoint.components(separatedBy: " ")[1]
+// remember to import Foundation
+```
+
+String is also a sequence, and it's a collection.
+
+```swift
+for c in s{}
+let characterArray = Array(s);
+
+// Note the ..< Range appears to have no start. But it do works
+```
+
+## NSAttributedString
+
+```swift
+let attributes: [NSAttributedStringKey: Any] = 
+[
+  .strokeColor: UIColor.orange,
+  .strokeWidth: 5.0
+]
+let attribtext = NSAttributedString(string: "Flips: 0", attributes: attributes);
+
+```
+
+
+
+## Closure
+
+ super simple
+
+```swift
+var operation: (Double) -> Double = {-$0};
+or
+var operation: (Double) -> Double = {(operated: Double)->Double in return -operated};
+// All those parameters, return types whatever can be easily inferred by swift. And the return sign can also be omitted. We can also simply call the parameters $0, $1, $2 ...
+let result = operation(4.0)//result will be -4.0
+```
+
+And where do we use it(Closure)?
+
+```swift
+//Array has a method called map which takes a function as an argument.
+let primes = [2.0,3.0,5.0,7.0,11.0];
+let negativePrimes = primes.map({-$0});
+let invertedPrimes = primes.map() {1.0/$0};
+let primeStrings = primes.map { String($0)};
+//如果某个函数的最后一个参数是一个闭包，那么它可以被放在小括号外面。
+//如果这个参数是该函数的唯一一个参数，那么这个函数可以没有小括号。
+
+// Property initialization
+var someProperty: Type = 
+{
+  //Constructing the value of someProperty here
+  return <the constructed value>
+}()// This is going to be especially useful when dealing with lazy vars
+
+// Closures capture stuff around them and it's of reference type
+var ltuae = 42
+operation = { ltuae * $0 }
+arrayOfOperations.append(operation)
+```
+
+## Thrown Error
+
+In swift, methods can throw errors
+
+- having keyword throws on the end
+
+```swift
+func save() throws
+do
+{
+  try context.save()
+}
+catch let error
+{
+  throw error
+}
+let x = try? throwOrInt()
+
+```
+
+## Any or AnyObject
+
+```swift
+let unknown: Any = ...
+if let foo = unknown as? MyType
+{
+  
+}
+
+let vc: UIViewController = ConcentrationViewController()
+// This is legal, but you can touch card or whatever here.
+if let cvc = vc as? ConcentrationViewController
+{
+  cvc.flipCard(...)// This is gonna be OK.
+}
+```
+
+## Views
+
+```swift
+var superview: UIView?
+var subviews: [UIView]
+```
+
+The hierarchy is mostly often constructed in Xcode graphically
+
+- even custom views are usually added to the view hiearchy using Xcode
+
+But it can also be done in code as well
+
+```swift
+func addSubview(_ view: UIView)	// Sent to view's superview
+func removeFromSuperview()			// Sent to the view you want to remove
+```
+
+What't the top?
+
+```swift
+var view: UIView
+```
+
+## Initializing a UIView
+
+using initializers
+
+## Coordinate System Data Structure
+
+### CGFloat
+
+### CGPoint
+
+```swift
+var point = CGPoint(x: 37.0, y: 55.2)
+point.x -= 30
+point.y += 20.0
+```
+
+### CGSize
+
+```swift
+var size = CGSize(width: 100.0, height: 50.0)
+size.width += 42.5
+size.height += 75
+```
+
+### CGRect
+
+```swift
+struct CGRect
+{
+  var origin: CGPoint
+  var size: CGSize
+}
+let rect = CGRect(origin: aCGPoint, size: aCGSizee)
+```
+
+Origin is upper left. Example:
+
+```swift
+// Assume this code is in a UIViewController (and thus the var view is the root view)
+let labelRect = CGRect(x: 20, y: 20, width: 100, height: 50)
+let label = UILabel(frame: labelRect)
+labet.text = "Hello"
+view.addSubview(label);
+```
+
+
+
+## To Draw
+
+### Core Graphics Concepts
+
+1. Get a context to draw in.
+2. Create paths
+3. Set drawing attributes
+4. Stroke or fill the above-created paths with the given attributes
+
+### UIBezierPath
+
+Almost the same
 
