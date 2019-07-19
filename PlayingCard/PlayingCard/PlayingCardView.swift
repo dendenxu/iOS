@@ -12,13 +12,13 @@ class PlayingCardView: UIView {
 
     var rank: Int = 5 { didSet { setNeedsDisplay();setNeedsLayout() } }
     var suit: String = "♡" { didSet { setNeedsDisplay();setNeedsLayout() } }
-    var isFaceUp: Bool = true
+    var isFaceUp: Bool = true { didSet { setNeedsDisplay();setNeedsLayout() } }
 
 
     private func centeredAttributedString(_ string: String, fontSize: CGFloat) -> NSAttributedString
     {
         var font = UIFont.preferredFont(forTextStyle: .body).withSize(fontSize)
-        font = UIFontMetrics(forTextStyle: .body).scaledFont(for: font)
+        font = UIFontMetrics(forTextStyle: .body).scaledFont(for: font)// In case you scroll your font size in your phone's setting
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         return NSAttributedString(string: string, attributes: [.paragraphStyle: paragraphStyle, .font: font])
@@ -28,6 +28,43 @@ class PlayingCardView: UIView {
     {
         return centeredAttributedString(rankString + "\n" + suit, fontSize: cornerFontSize)
     }
+
+    private lazy var upperLeftCornerLabel = createCornerLabel()
+
+    private lazy var lowerRightCornerLabel = createCornerLabel()
+
+    private func createCornerLabel() -> UILabel
+    {
+        let label = UILabel()
+        label.numberOfLines = 0// Uses as many lines as you may
+        addSubview(label)
+        return label
+    }
+
+    private func configureCornerLabel(_ label: UILabel)
+    {
+        label.attributedText = cornerString
+        label.frame.size = CGSize.zero// In case the width of the size is set already
+        label.sizeToFit()
+        label.isHidden = !isFaceUp
+
+    }
+
+    override func layoutSubviews()
+    {
+        super.layoutSubviews()
+        configureCornerLabel(upperLeftCornerLabel)
+        upperLeftCornerLabel.frame.origin = bounds.origin.offsetBy(dx: cornerOffset, dy: cornerOffset)
+        
+        configureCornerLabel(lowerRightCornerLabel)
+        lowerRightCornerLabel.transform = CGAffineTransform.identity
+            .translatedBy(x: lowerRightCornerLabel.frame.size.width, y: lowerRightCornerLabel.frame.size.height)
+            .rotated(by: CGFloat.pi)
+        lowerRightCornerLabel.frame.origin = CGPoint(x: bounds.maxX, y: bounds.maxY)
+            .offsetBy(dx: -cornerOffset, dy: -cornerOffset)
+            .offsetBy(dx: -lowerRightCornerLabel.frame.size.width, dy: -lowerRightCornerLabel.frame.size.height)
+    }
+
 
     override func draw(_ rect: CGRect)
     {
@@ -84,7 +121,7 @@ extension CGRect {
     }
 
     var rightHalf: CGRect {
-        return CGRect(x: midX, y: minY, width: width / 2, height: height)
+        return CGRect(x: midX + width / 2, y: minY, width: width / 2, height: height)
     }
 
     func inset(by size: CGSize) -> CGRect {
@@ -98,7 +135,7 @@ extension CGRect {
     func zoom(by scale: CGFloat) -> CGRect {
         let newWidth = width * scale
         let newHeight = height * scale
-        return insetBy(dx: (width - newWidth) / 2, dy: (height - newHeight) / 2)
+        return insetBy(dx: (newWidth - width) / 2, dy: (newHeight - height) / 2)
     }
 }
 
