@@ -907,3 +907,42 @@ extension CGPoint {
 }
 ```
 
+## Multitouch
+
+```swift
+// UIGestureRecognizer（抽象的概念）
+
+// 一般利用didSet来添加识别器（当iOS在运行时将这个变量连接起来后）
+@IBOutlet weak var pannableView: UIView
+{
+  didSet// 创建变量的时候直接添加recognizer
+  {
+    // 直接创建这样的识别器，并将其与某个handle（一般是ViewController中的某个方法）绑定
+    let panGestureRecognizer = UIPanGestureRecognizer
+    (
+    	target: self, action: #selector(ViewController.pan(recognizer:))
+    )
+    
+    //为某个东西添加上面的手势识别器
+    pannableView.addGestureRecognizer(panGestureRecognizer)
+  }
+}
+```
+
+1. Adding a gesture recognizer
+2. Providing a method to "handle"
+
+```swift
+func pan(recognizer: UIPanGestureRecognizer)
+{
+  switch recognizer.state
+  {
+    case .changed: fallthrough
+    case .ended:
+    	let translation = recognizer.translation(in: pannableView)
+    	recognizer.setTranslation(CGPoint.zero, in: pannableView)
+    default: break
+  }
+}
+```
+

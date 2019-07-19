@@ -11,17 +11,32 @@ import UIKit
 class ViewController: UIViewController {
 
     var deck = PlayingCardDeck()
+    @IBOutlet weak var PlayingCardView: PlayingCardView!
+    {
+        didSet
+        {
+            let swipe = UISwipeGestureRecognizer(target: self, action: #selector(nextCard))
+            swipe.direction = [.left,.right]
+            PlayingCardView.addGestureRecognizer(swipe)
+        }
+    }
+    
+    @IBAction func flipCard(_ sender: UITapGestureRecognizer)
+    {
+        PlayingCardView.isFaceUp = !PlayingCardView.isFaceUp
+    }
+    @objc func nextCard()
+    {
+        if let card = deck.draw()
+        {
+            PlayingCardView.rank = card.rank.order
+            PlayingCardView.suit = card.suit.rawValue
+        }
+    }
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
-        for _ in 1...10
-        {
-            if let card = deck.draw()
-            {
-                print(card)
-            }
-        }
     }
 
 }
