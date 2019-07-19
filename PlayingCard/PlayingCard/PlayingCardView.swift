@@ -12,13 +12,26 @@ import UIKit
 class PlayingCardView: UIView {
 
     @IBInspectable
-    var rank: Int = 10 { didSet { setNeedsDisplay();setNeedsLayout() } }
+    var rank: Int = 13 { didSet { setNeedsDisplay();setNeedsLayout() } }
     @IBInspectable
     var suit: String = "♢" { didSet { setNeedsDisplay();setNeedsLayout() } }
     @IBInspectable
     var isFaceUp: Bool = true { didSet { setNeedsDisplay();setNeedsLayout() } }
 
-
+    var playingCardScale: CGFloat = SizeRatio.faceCardImageSizeToBoundsSize { didSet { setNeedsDisplay() } }
+    
+    @objc func setPlayingCardScale(byPinchGestureRecognizer recognizer: UIPinchGestureRecognizer)
+    {
+        switch recognizer.state
+        {
+        case .changed:
+            playingCardScale *= recognizer.scale
+            recognizer.scale = 1.0
+        default: break
+        }
+    }
+    
+    
     private func centeredAttributedString(_ string: String, fontSize: CGFloat) -> NSAttributedString
     {
         var font = UIFont.preferredFont(forTextStyle: .body).withSize(fontSize)
@@ -85,7 +98,7 @@ class PlayingCardView: UIView {
         {
             if let faceCardImage = UIImage(named: rankString + suitString, in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)
             {
-                faceCardImage.draw(in: bounds.zoom(by: SizeRatio.faceCardImageSizeToBoundsSize))
+                faceCardImage.draw(in: bounds.zoom(by: playingCardScale))
             }
             else
             {

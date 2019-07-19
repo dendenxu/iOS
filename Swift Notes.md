@@ -923,6 +923,8 @@ extension CGPoint {
     	target: self, action: #selector(ViewController.pan(recognizer:))
     )
     
+    // The property observer's didSet code gets called when iOS hooks up this outlet at runtime. Here we are creating an instance of concrete subclass of UIGestureRecognizer (for pans). The target gets notified when the gesture is recognized
+    
     //为某个东西添加上面的手势识别器
     pannableView.addGestureRecognizer(panGestureRecognizer)
   }
@@ -944,5 +946,435 @@ func pan(recognizer: UIPanGestureRecognizer)
     default: break
   }
 }
+```
+
+
+
+
+
+## Playing Card Code Collection
+
+```swift
+//
+//  PlayingCard.swift
+//  PlayingCard
+//
+//  Created by Xuzh on 2019/7/18.
+//  Copyright © 2019 Xuzh. All rights reserved.
+//
+
+import Foundation
+
+
+// The protocol CustomStringConvertible enables you to use stuff like \(...)
+struct PlayingCard: CustomStringConvertible
+{
+    var description: String// This is the stuff inside the CustomStringConvertible protocol
+    {
+        return "\(rank)\(suit)"
+    }
+    
+  
+  	// These are the two main variables of class: PlayingCard
+    var suit: Suit
+    var rank: Rank
+
+    enum Suit: String, CustomStringConvertible
+    {
+        var description: String// Stuff for CustomStringConverible
+        {
+            return rawValue
+        }
+        
+      
+      	// enum with rawValue(the rawValue can be directly accessed)
+        case spades = "♤"
+        case hearts = "♡"
+        case clubs = "♧"
+        case diamonds = "♢"
+				
+      	// The static var is for initialization
+        static var all: [Suit] = [Suit.clubs, Suit.diamonds, Suit.hearts, Suit.spades]
+
+    }
+
+    enum Rank: CustomStringConvertible
+    {
+        //This is how you gonna display it
+      	var description: String
+        {
+            switch self
+            {
+            case .ace: return "A"
+            case .numeric(let number): return String(number)
+            case .face(let string): return string
+            }
+        }
+        
+        case ace
+        case face(String)
+        case numeric(Int)
+				
+      	// The order of the Rank is somehow like the rawValue of the Suit
+        var order: Int
+        {
+            switch self
+            {
+            case .ace: return 1
+            case .face(let kind) where kind == "J": return 11
+            case .face(let kind) where kind == "K": return 13
+            case .face(let kind) where kind == "Q": return 12
+            case .numeric(let pips): return pips
+            default: return 0
+            }
+        }
+
+      	// The static var is for initialization
+        static var all: [Rank]
+        {
+            // This is a computed property and this is a getter
+          	var allRanks = [Rank.ace]
+            for pips in 2...10
+            {
+                allRanks.append(Rank.numeric(pips))
+            }
+            allRanks += [.face("J"), .face("Q"), .face("K")]
+            return allRanks
+        }
+        
+        
+    }
+}
+
+```
+
+```swift
+//
+//  PlayingCardDeck.swift
+//  PlayingCard
+//
+//  Created by Xuzh on 2019/7/18.
+//  Copyright © 2019 Xuzh. All rights reserved.
+//
+
+import Foundation
+
+struct PlayingCardDeck
+{
+    // initializing with an empty PlayingCard array
+  	private(set) var cards = [PlayingCard]()
+
+  	// emm OK. this is the true initializer
+    init()
+    {
+        // the All inside Suit and Rank provides convenience for initialization
+      	for suit in PlayingCard.Suit.all
+        {
+            for rank in PlayingCard.Rank.all
+            {
+                // The whole initialization process is actually appending stuff in the array
+              	cards.append(PlayingCard(suit: suit, rank: rank))
+            }
+        }
+    }
+  
+  	// This is a struct, and struct is value type. And you should use mutating when trying to modify the value of a value type
+  	// "draw" doesn't mean painting here, it means extracting something out the PlayingCardDeck
+    mutating func draw() -> PlayingCard?
+    {
+        if cards.count > 0
+        {
+            return cards.remove(at: cards.count.arc4random)
+        }
+        else
+        {
+            return nil
+        }
+    }
+}
+
+extension Int
+{
+    var arc4random: Int
+    {
+        if self > 0
+        {
+            return Int(arc4random_uniform(UInt32(self)))
+        }
+        else if self < 0
+        {
+            return -Int(arc4random_uniform(UInt32(-self)))
+        }
+        else
+        {
+            return 0
+        }
+    }
+}
+
+```
+
+```swift
+//
+//  PlayingCardView.swift
+//  PlayingCard
+//
+//  Created by Xuzh on 2019/7/19.
+//  Copyright © 2019 Xuzh. All rights reserved.
+//
+
+
+// OK. Now comes the big one.
+// This is your custom view class
+import UIKit
+
+@IBDesignable// This means you can render it inside the main.storyboard
+class PlayingCardView: UIView {
+
+    @IBInspectable// This means you can modify those values in main.storyboard's inspector
+    var rank: Int = 13 { didSet { setNeedsDisplay();setNeedsLayout() } }// Doing the didSet means that once the value is changed somehow, you should require iOS to redraw your things using setNeedsDisplay(), and require iOS to redraw your subviews using setNeedsLayout()
+    @IBInspectable
+    var suit: String = "♢" { didSet { setNeedsDisplay();setNeedsLayout() } }
+    @IBInspectable
+    var isFaceUp: Bool = true { didSet { setNeedsDisplay();setNeedsLayout() } }
+
+  
+  	// The following two is for pinch gesture
+    var playingCardScale: CGFloat = SizeRatio.faceCardImageSizeToBoundsSize { didSet { setNeedsDisplay() } }
+    // To use this as the handle of the gesture recognizer, we should declare it using @obj
+    @objc func setPlayingCardScale(byPinchGestureRecognizer recognizer: UIPinchGestureRecognizer)
+    {
+        switch recognizer.state// Switching on the state is a safe way to do this
+        {
+        case .changed:
+            playingCardScale *= recognizer.scale
+            recognizer.scale = 1.0// This is to ensure the scale is going in linear speed
+        default: break
+        }
+    }
+    
+    // Creating centeredAttributedString for our small label
+    private func centeredAttributedString(_ string: String, fontSize: CGFloat) -> NSAttributedString
+    {
+        // Create a font and then scale it to proper size in case ...
+      	var font = UIFont.preferredFont(forTextStyle: .body).withSize(fontSize)
+        font = UIFontMetrics(forTextStyle: .body).scaledFont(for: font)// In case you scroll your font size in your phone's setting
+      
+      	// NSMutableParagraghStyle has everything that a paragraph might need
+        let paragraphStyle = NSMutableParagraphStyle()// Initializing with an empty one
+        paragraphStyle.alignment = .center// paragraphStyle is one of the NSAttributedStringKeys
+        return NSAttributedString(string: string, attributes: [.paragraphStyle: paragraphStyle, .font: font])
+    }
+
+  	// Using the previous function to create an cornerString out of our suit and rank
+  	// rankString is inside the extension(converting rank: Int to the specified String) 
+    private var cornerString: NSAttributedString
+    {
+        return centeredAttributedString(rankString + "\n" + suit, fontSize: cornerFontSize)
+    }
+
+    private lazy var upperLeftCornerLabel = createCornerLabel()
+
+    private lazy var lowerRightCornerLabel = createCornerLabel()
+
+  	// Create an empty label and set it as PlayingCardView's subview
+    private func createCornerLabel() -> UILabel
+    {
+        let label = UILabel()
+        label.numberOfLines = 0// Uses as many lines as you may
+        addSubview(label)
+        return label
+    }
+
+    private func configureCornerLabel(_ label: UILabel)
+    {
+        label.attributedText = cornerString
+        label.frame.size = CGSize.zero// In case the width of the size is set already
+        label.sizeToFit()
+        label.isHidden = !isFaceUp
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        setNeedsLayout()
+        setNeedsDisplay()
+    }
+
+    override func layoutSubviews()
+    {
+        super.layoutSubviews()
+        configureCornerLabel(upperLeftCornerLabel)
+        upperLeftCornerLabel.frame.origin = bounds.origin.offsetBy(dx: cornerOffset, dy: cornerOffset)
+
+        configureCornerLabel(lowerRightCornerLabel)
+        lowerRightCornerLabel.transform = CGAffineTransform.identity
+            .translatedBy(x: lowerRightCornerLabel.frame.size.width, y: lowerRightCornerLabel.frame.size.height)
+            .rotated(by: CGFloat.pi)
+        lowerRightCornerLabel.frame.origin = CGPoint(x: bounds.maxX, y: bounds.maxY)
+            .offsetBy(dx: -cornerOffset, dy: -cornerOffset)
+            .offsetBy(dx: -lowerRightCornerLabel.frame.size.width, dy: -lowerRightCornerLabel.frame.size.height)
+    }
+
+
+    override func draw(_ rect: CGRect)
+    {
+        let roundedRect = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius)
+        roundedRect.addClip()
+        UIColor.white.setFill()
+        roundedRect.fill()
+				
+      	// suitString is inside the extension(for image searching purpose only). Somehow the good-looking ones can't be used inside file name
+        if isFaceUp
+        {
+            if let faceCardImage = UIImage(named: rankString + suitString, in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)
+            {
+                faceCardImage.draw(in: bounds.zoom(by: playingCardScale))
+            }
+            else
+            {
+                drawPips()
+            }
+        }
+        else
+        {
+            if let cardBackImage = UIImage(named: "cardback",in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)
+            {
+                cardBackImage.draw(in: bounds)
+            }
+        }
+    }
+
+    private func drawPips()
+    {
+        let pipsPerRowForRank = [[0], [1], [1, 1], [1, 1, 1], [2, 2], [2, 1, 2], [2, 2, 2], [2, 1, 2, 2], [2, 2, 2, 2], [2, 2, 1, 2, 2], [2, 2, 2, 2, 2]]
+
+        func createPipString(thatFits pipRect: CGRect) -> NSAttributedString
+        {
+            let maxVerticalPipCount = CGFloat(pipsPerRowForRank.reduce(0) { max($1.count, $0) })
+            let maxHorizontalPipCount = CGFloat(pipsPerRowForRank.reduce(0) { max($1.max() ?? 0, $0) })
+            let verticalPipRowSpacing = pipRect.size.height / maxVerticalPipCount
+            let attemptedPipString = centeredAttributedString(suit, fontSize: verticalPipRowSpacing)
+            let probablyOkayPipStringFontSize = verticalPipRowSpacing / (attemptedPipString.size().height / verticalPipRowSpacing)
+            let probablyOkayPipString = centeredAttributedString(suit, fontSize: probablyOkayPipStringFontSize)
+            if probablyOkayPipString.size().width > pipRect.size.width / maxHorizontalPipCount
+            {
+                return centeredAttributedString(suit, fontSize: probablyOkayPipStringFontSize /
+                (probablyOkayPipString.size().width / (pipRect.size.width / maxHorizontalPipCount)))
+            }
+            else
+            {
+                return probablyOkayPipString
+            }
+        }
+
+        if pipsPerRowForRank.indices.contains(rank)
+        {
+            let pipsPerRow = pipsPerRowForRank[rank]
+            var pipRect = bounds.insetBy(dx: cornerOffset, dy: cornerOffset).insetBy(dx: cornerString.size().width, dy: cornerString.size().height / 2)
+            let pipString = createPipString(thatFits: pipRect)
+            let pipRowSpacing = pipRect.size.height / CGFloat(pipsPerRow.count)
+            pipRect.size.height = pipString.size().height
+            pipRect.origin.y += (pipRowSpacing - pipRect.size.height) / 2
+            for pipCount in pipsPerRow
+            {
+                switch pipCount
+                {
+                case 1:
+                    pipString.draw(in: pipRect)
+                case 2:
+                    pipString.draw(in: pipRect.leftHalf)
+                    pipString.draw(in: pipRect.rightHalf)
+                default:
+                    break
+                }
+                pipRect.origin.y += pipRowSpacing
+            }
+        }
+    }
+
+}
+extension PlayingCardView
+{
+    private struct SizeRatio
+    {
+        static let cornerFontSizeToBoundsHeight: CGFloat = 0.085
+        static let cornerRadiusToBoundsHeight: CGFloat = 0.06
+        static let cornerOffsetToCornerRadius: CGFloat = 0.33
+        static let faceCardImageSizeToBoundsSize: CGFloat = 0.75
+    }
+
+    private var cornerRadius: CGFloat
+    {
+        return bounds.size.height * SizeRatio.cornerRadiusToBoundsHeight
+    }
+
+    private var cornerOffset: CGFloat
+    {
+        return cornerRadius * SizeRatio.cornerOffsetToCornerRadius
+    }
+
+    private var cornerFontSize: CGFloat
+    {
+        return bounds.size.height * SizeRatio.cornerFontSizeToBoundsHeight
+    }
+
+  	// rankString is inside the extension(converting rank: Int to the specified String) 
+    private var rankString: String
+    {
+        switch rank
+        {
+        case 1: return "A"
+        case 2...10: return String(rank)
+        case 11: return "J"
+        case 12: return "Q"
+        case 13: return "K"
+        default: return "?"
+        }
+    }
+
+  	// suitString is inside the extension(for image searching purpose only). Somehow the good-looking ones can't be used inside file name
+    private var suitString: String
+    {
+        switch suit
+        {
+        case "♤": return "♠️"
+        case "♡": return "♥️"
+        case "♧": return "♣️"
+        case "♢": return "♦️"
+        default: return "?"
+        }
+    }
+}
+
+
+extension CGRect {
+    var leftHalf: CGRect {
+        return CGRect(x: minX, y: minY, width: width / 2, height: height)
+    }
+
+    var rightHalf: CGRect {
+        return CGRect(x: midX, y: minY, width: width / 2, height: height)
+    }
+
+    func inset(by size: CGSize) -> CGRect {
+        return insetBy(dx: size.width, dy: size.height)
+    }
+
+    func sized(to size: CGSize) -> CGRect {
+        return CGRect(origin: origin, size: size)
+    }
+
+    func zoom(by scale: CGFloat) -> CGRect {
+        let newWidth = width * scale
+        let newHeight = height * scale
+        return insetBy(dx: (width - newWidth) / 2, dy: (height - newHeight) / 2)
+    }
+}
+
+extension CGPoint {
+    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
+        return CGPoint(x: x + dx, y: y + dy)
+    }
+}
+
 ```
 
