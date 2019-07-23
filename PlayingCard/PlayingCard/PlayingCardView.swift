@@ -124,6 +124,7 @@ class PlayingCardView: UIView {
             let maxHorizontalPipCount = CGFloat(pipsPerRowForRank.reduce(0) { max($1.max() ?? 0, $0) })
             let verticalPipRowSpacing = pipRect.size.height / maxVerticalPipCount
             let attemptedPipString = centeredAttributedString(suit, fontSize: verticalPipRowSpacing)
+//            let probablyOkayPipStringFontSize = verticalPipRowSpacing
             let probablyOkayPipStringFontSize = verticalPipRowSpacing / (attemptedPipString.size().height / verticalPipRowSpacing)
             let probablyOkayPipString = centeredAttributedString(suit, fontSize: probablyOkayPipStringFontSize)
             if probablyOkayPipString.size().width > pipRect.size.width / maxHorizontalPipCount
@@ -240,7 +241,8 @@ extension CGRect {
 }
 
 extension CGPoint {
-    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
+    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint
+    {
         return CGPoint(x: x + dx, y: y + dy)
     }
 }

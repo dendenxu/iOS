@@ -1,4 +1,4 @@
-## 注释部分备案
+## Concentration Code Collection
 
 整理后的代码详见具体文件
 
@@ -209,7 +209,7 @@ struct Card//every struct gets a free initializer with all its instance variable
 
 ```
 
-## 整个`Concentration`游戏的逻辑
+## `Concentration`
 
 - `Model`
   - `Concentraion`负责成对分配卡片，打乱顺序，以及在接收到信息时对卡片做处理
@@ -1186,57 +1186,79 @@ class PlayingCardView: UIView {
         return label
     }
 
+  	// Adding attributed String to the label specified(now we only have its position to worry about)
     private func configureCornerLabel(_ label: UILabel)
     {
         label.attributedText = cornerString
         label.frame.size = CGSize.zero// In case the width of the size is set already
         label.sizeToFit()
-        label.isHidden = !isFaceUp
+        label.isHidden = !isFaceUp// Sync with whether the card is face up
     }
 
+  	// To make it possible for monitoring whether you've dragged the scroll bar in your iPhone's setting
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         setNeedsLayout()
         setNeedsDisplay()
     }
 
+  	// This function draws current view's subviews
     override func layoutSubviews()
     {
-        super.layoutSubviews()
+        // This is pretty much something every layoutSubviews() function needs
+      	super.layoutSubviews()
+      
+      	// UpperLeftCornerString Part
+      	// Adding attributed string
         configureCornerLabel(upperLeftCornerLabel)
+      	// Putting the origin point in the right position
+      	// Moving thing along some offset
+      	// The offset constant is set in the extension part
         upperLeftCornerLabel.frame.origin = bounds.origin.offsetBy(dx: cornerOffset, dy: cornerOffset)
 
+      
+      	// LowerRightCornerString Part
+      	// Adding attributed string
         configureCornerLabel(lowerRightCornerLabel)
+      	// AffineTransform: 仿射变换
+      	// 通过仿射变换来使右下角的内容倒过来。由于旋转是绕着origin点发生的，在旋转前后我们应适当移动label
         lowerRightCornerLabel.transform = CGAffineTransform.identity
             .translatedBy(x: lowerRightCornerLabel.frame.size.width, y: lowerRightCornerLabel.frame.size.height)
-            .rotated(by: CGFloat.pi)
+            .rotated(by: CGFloat.pi)// 直接给label的transform属性增加一个CGAffineTransform
         lowerRightCornerLabel.frame.origin = CGPoint(x: bounds.maxX, y: bounds.maxY)
             .offsetBy(dx: -cornerOffset, dy: -cornerOffset)
-            .offsetBy(dx: -lowerRightCornerLabel.frame.size.width, dy: -lowerRightCornerLabel.frame.size.height)
+      			// In conclusion, a frame is used to draw a view in relation to its superview. The bounds are used to draw within a view’s own space.
+            .offsetBy(dx: -lowerRightCornerLabel.frame.size.width, dy: -lowerRightCornerLabel.frame.size.height)// 由于label是按照从左到右，从上到下的顺序打印的，我们需要将其像左上方移动一定距离
     }
 
 
     override func draw(_ rect: CGRect)
     {
-        let roundedRect = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius)
-        roundedRect.addClip()
+        //这个initializer只是BezierPath里面众多initializer的一个
+      	let roundedRect = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius)
+        roundedRect.addClip()// subview 里面超出的部分就直接clip掉好了
         UIColor.white.setFill()
         roundedRect.fill()
 				
       	// suitString is inside the extension(for image searching purpose only). Somehow the good-looking ones can't be used inside file name
         if isFaceUp
         {
-            if let faceCardImage = UIImage(named: rankString + suitString, in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)
+            // 一般情况下我们使用if let语句来处理image，因为很有可能根本找不到这个相应的image
+          	if let faceCardImage = UIImage(named: rankString + suitString, in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)
             {
-                faceCardImage.draw(in: bounds.zoom(by: playingCardScale))
+                // 找得到的话，直接调用这个UIImage的draw方法就行
+              	// zoom和playingCardScale纯碎是为了实现拖放功能而放在这儿
+              	// zoom能够保证这张图片以一定的中心缩放显示，而不是直接占满整个bounds
+              	// 记住：bounds是对内的，frame是对super的
+              	faceCardImage.draw(in: bounds.zoom(by: playingCardScale))
             }
             else
             {
-                drawPips()
+                drawPips()// 这个函数其实他真的很长，很长，很长，很长……
             }
         }
         else
         {
-            if let cardBackImage = UIImage(named: "cardback",in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)
+            if let cardBackImage = UIImage(named: "cardback",in:Bundle(for: self.classForCoder), compatibleWith: traitCollection)//除了name以外的部分只是为了让这张图片能在storyboard的预览中被展示出来
             {
                 cardBackImage.draw(in: bounds)
             }
@@ -1246,10 +1268,15 @@ class PlayingCardView: UIView {
     private func drawPips()
     {
         let pipsPerRowForRank = [[0], [1], [1, 1], [1, 1, 1], [2, 2], [2, 1, 2], [2, 2, 2], [2, 1, 2, 2], [2, 2, 2, 2], [2, 2, 1, 2, 2], [2, 2, 2, 2, 2]]
+      	// data driven
 
         func createPipString(thatFits pipRect: CGRect) -> NSAttributedString
         {
-            let maxVerticalPipCount = CGFloat(pipsPerRowForRank.reduce(0) { max($1.count, $0) })
+            // about reduce: 就有点像递归，用于sequence
+          	// 第一次reduce中，$0是reduce的第一个参数，$1是sequence中的第一个参数
+          	// 第二次reduce中，$0是上一次reduce的结果，$1是sequence中的下一个参数（sequence has next）
+          	// And the following code is pretty self explanary
+          	let maxVerticalPipCount = CGFloat(pipsPerRowForRank.reduce(0) { max($1.count, $0) })
             let maxHorizontalPipCount = CGFloat(pipsPerRowForRank.reduce(0) { max($1.max() ?? 0, $0) })
             let verticalPipRowSpacing = pipRect.size.height / maxVerticalPipCount
             let attemptedPipString = centeredAttributedString(suit, fontSize: verticalPipRowSpacing)
@@ -1271,9 +1298,11 @@ class PlayingCardView: UIView {
             let pipsPerRow = pipsPerRowForRank[rank]
             var pipRect = bounds.insetBy(dx: cornerOffset, dy: cornerOffset).insetBy(dx: cornerString.size().width, dy: cornerString.size().height / 2)
             let pipString = createPipString(thatFits: pipRect)
+          
+          	// This centers it
             let pipRowSpacing = pipRect.size.height / CGFloat(pipsPerRow.count)
             pipRect.size.height = pipString.size().height
-            pipRect.origin.y += (pipRowSpacing - pipRect.size.height) / 2
+            pipRect.origin.y += (pipRowSpacing - pipRect.size.height) / 2// You know what I'm saying? Center!
             for pipCount in pipsPerRow
             {
                 switch pipCount
@@ -1294,7 +1323,9 @@ class PlayingCardView: UIView {
 }
 extension PlayingCardView
 {
-    private struct SizeRatio
+    // Some Ratio
+  	// example: cornerFontSizeToBoundsHeight * BoundsHeight(bounds.size.height) = cornerFontSize
+  	private struct SizeRatio
     {
         static let cornerFontSizeToBoundsHeight: CGFloat = 0.085
         static let cornerRadiusToBoundsHeight: CGFloat = 0.06
@@ -1302,11 +1333,13 @@ extension PlayingCardView
         static let faceCardImageSizeToBoundsSize: CGFloat = 0.75
     }
 
+  	// Creating a rectangle with radius
     private var cornerRadius: CGFloat
     {
         return bounds.size.height * SizeRatio.cornerRadiusToBoundsHeight
     }
 
+  	// Using offset to make sure the label doesn't get clipped by the frame
     private var cornerOffset: CGFloat
     {
         return cornerRadius * SizeRatio.cornerOffsetToCornerRadius
@@ -1355,14 +1388,16 @@ extension CGRect {
         return CGRect(x: midX, y: minY, width: width / 2, height: height)
     }
 
+  	// Center-based resizing
     func inset(by size: CGSize) -> CGRect {
         return insetBy(dx: size.width, dy: size.height)
     }
-
+		// Origin-based resizing
     func sized(to size: CGSize) -> CGRect {
         return CGRect(origin: origin, size: size)
     }
 
+  	// Center-based scaling
     func zoom(by scale: CGFloat) -> CGRect {
         let newWidth = width * scale
         let newHeight = height * scale
@@ -1371,10 +1406,340 @@ extension CGRect {
 }
 
 extension CGPoint {
-    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
+  	// Moving an CGPoint away
+  	// This is used when putting the label in the right position
+    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint
+  	{
         return CGPoint(x: x + dx, y: y + dy)
     }
 }
+// That's a damn long code to read...
+```
+
+```swift
+//
+//  ViewController.swift
+//  PlayingCard
+//
+//  Created by Xuzh on 2019/7/18.
+//  Copyright © 2019 Xuzh. All rights reserved.
+//
+
+import UIKit
+
+class ViewController: UIViewController {
+
+    var deck = PlayingCardDeck()// Creating a deck for drawing random card out
+    @IBOutlet weak var PlayingCardView: PlayingCardView!
+    {
+        didSet// Mostly we use didSet to add gesture recognizer to our view
+        {
+            // This is the common paradiam
+          	let swipe = UISwipeGestureRecognizer(target: self, action: #selector(nextCard))
+            swipe.direction = [.left, .right]// We can always hit dot and then wait for the code to be completed
+            PlayingCardView.addGestureRecognizer(swipe)
+          	// Target is where the action is, usually it's the view controller itself
+            let pinch = UIPinchGestureRecognizer(target: PlayingCardView, action: #selector(PlayingCardView.setPlayingCardScale(byPinchGestureRecognizer:)))
+            PlayingCardView.addGestureRecognizer(pinch)
+        }
+    }
+		// OR WE CAN JUST USE IBAction TO ADD GESTURE RECOGNIZER
+    @IBAction func flipCard(_ sender: UITapGestureRecognizer)
+    {
+        switch sender.state
+        {
+        case .ended: PlayingCardView.isFaceUp = !PlayingCardView.isFaceUp
+        default: break
+        }
+
+    }
+    @objc func nextCard()
+    {
+        if let card = deck.draw()
+        {
+            PlayingCardView.rank = card.rank.order
+            PlayingCardView.suit = card.suit.rawValue
+        }
+    }
+
+		
+  	// This function is for testing things
+  	// When view is loaded, it's executed. So we can put some code to test our features within the bracket
+    override func viewDidLoad() {
+        super.viewDidLoad()
+    }
+
+}
+```
+
+## Multiple MVCs
+
+When trying to use multiple MVCs in swift, we should note the following stuff
+
+1. After control dragging the button to the view to create a segue, we should always change the segue's identifier so that we can use that in preperation procedure.
+2. When creating another view controller, we should add a new cocoa touch class file to our xcode project and change the added view's class to that one
+
+```swift
+// I've implemented a splitview controller inside my interface builder
+// The new theme chooser class is ConcentrationThemeChooserViewController
+//
+//  ThemeChooserViewController.swift
+//  Concentration
+//
+//  Created by Xuzh on 2019/7/20.
+//  Copyright © 2019 Zhen Xu. All rights reserved.
+//
+
+import UIKit
+
+class ConcentrationThemeChooserViewController: UIViewController, UISplitViewControllerDelegate{
+
+    let themes =
+        [
+            "Sports": "⚽️🏀🏈⚾️🥎🏐🏉🎾🥏🎱🏓🏸🥅🏒🏑🥍🏏⛳️",
+            "Animals": "🐶🐱🐭🐹🐰🦊🦝🐻🐼🦘🦡🐨🐯🦁🐮🐷🐽🐸",
+            "Faces": "😤😢😭😦😧😨😩🤯😬😰😱🥵🥶😳🤪😵😡😠"
+        ]
+
+  	// This is some delegate things.
+  	// Turns out awakeFromNib is a function get called when stuff built from interface builder is awaken
+    override func awakeFromNib()
+    {
+        splitViewController?.delegate = self// We need to claim ourself as an UISplitViewControllerDelegate to set ourself as its delegate
+    }
+    
+  
+  	// This function controls whether we collapse stuff when using iPhone
+    func splitViewController
+        (_ splitViewController: UISplitViewController,
+         collapseSecondary secondaryViewController: UIViewController,
+         onto primaryViewController: UIViewController) -> Bool
+    {
+        if let cvc = secondaryViewController as? ConcentrationViewController
+        {
+            if cvc.theme == nil
+            {
+                return true
+            }
+        }
+        return false
+    }
+    
+    @IBAction func changeTheme(_ sender: Any) {
+        if let cvc = splitViewDetailConcentraionViewController
+        {
+            if let themeName = (sender as? UIButton)?.currentTitle, let theme = themes[themeName]
+            {
+                cvc.theme = theme
+            }
+        }
+        else if let cvc = lastSeguedToDetailConcentrationViewController
+        {
+            if let themeName = (sender as? UIButton)?.currentTitle, let theme = themes[themeName]
+            {
+                cvc.theme = theme
+            }
+            navigationController?.pushViewController(cvc, animated: true)
+        }
+        else
+        {
+            performSegue(withIdentifier: "Choose Theme", sender: sender)
+        }
+    }
+    
+    
+    private var splitViewDetailConcentraionViewController: ConcentrationViewController?
+    {
+        return splitViewController?.viewControllers.last as? ConcentrationViewController
+    }
+    
+    private var lastSeguedToDetailConcentrationViewController: ConcentrationViewController?
+
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?)
+    {
+        // Get the new view controller using segue.destination.
+        // Pass the selected object to the new view controller.
+        if segue.identifier == "Choose Theme"
+        {
+            if let themeName = (sender as? UIButton)?.currentTitle, let theme = themes[themeName]
+            {
+                if let cvc = segue.destination as? ConcentrationViewController
+                {
+                    cvc.theme = theme
+                    lastSeguedToDetailConcentrationViewController = cvc
+                }
+            }
+        }
+    }
+
+}
 
 ```
+
+## Timer
+
+```swift
+class func scheduledTimer
+(
+	withTimerInterval: TimerInterval,
+  repeats: Bool,
+  block: (Timer) -> Void
+)
+
+private weak var timer: Timer?
+{
+  timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true)
+  {
+    // code to execute here.
+  }
+}
+
+timer.tolerance = 10 // in seconds
+// It might help system performance to set a tolerance for "late firing"
+```
+
+这种计时器并不完全精确（即使tolerance为零）。不能用于实时动画渲染。大概精度在十分之一秒左右。
+
+
+
+## Kinds of Animation
+
+1. Animating UIView properties
+2. Animating Controller transitions (as in a UINavigationController)
+3. Core Animation
+4. OpenGL and Metal: 3D
+5. SpriteKit: "2.5D"
+6. Dynamic Animation: "Physics" - based animation
+
+## UIView Properties Animation
+
+```swift
+//things to animate:
+//frame/center
+//bounds
+//transform
+//alpha
+//background
+
+UIViewPropertyAnimator using closures
+
+class func runningPropertyAnimator(
+	withDuration: TimeInterval
+  delay: TimeInterval
+  options: UIViewAnimatorOptions,
+  animations: ()->Void
+  completion: ((position: UIViewAnimatingPosition)->Void)? = nil
+)
+
+if mayView.alpha == 1.0 {
+  UIViewPropertyAnimator.runningPropertyAnimator(
+  	withDuraion: 3.0,
+    delay: 2.0,
+    options: [.allowUserInteraction],// otherwise users can't touch them
+    animations: { myView.alpha = 0.0 }// happens immediately
+    completion: { if $0 == .end { myView.removeFromSuperView } }
+  )
+  print("alpha = \(myView.alpha)")// even though it takes 5s to finish the operation, it still prints out zero at this time
+}
+```
+
+### UIViewAnimationOptions
+
+1. beginFromCurrentState: pick up from other, in-progress animations of these properties
+2. allowUserInteraction: all gestures to get processed while animation is in progress
+3. layoutSubviews: animate the relayout of subviews with a parent's animation
+4. repeat: repeat indefinitely
+5. autoreverse: play animation forwards, then backwards
+6. overrideInheritedDuration: if not set, use duration of any in-progress animation
+7. overrideInheritedCurve: if not set use curve(e.g. ease-in/out) of in-progress animation
+8. curveEaseInEaseOut: slower at beginning, normal throughout, the slow at end
+9. curveEaseIn
+10. curveLinear
+
+### Entire View Modification
+
+```swift
+UIView.AnimationOptions.transitionFlipFrom{Left, Right, Top, Bottom}//Flip the entire view over
+.transitionCrossDissolve//Dissolve from old to new state
+.transitionCurl{Up, Down}//Curling up or down
+```
+
+example:
+
+```siwft
+UIView.transition(
+	with: myPlayingCardView
+	duration: 0.75
+	options: [.transitionFlipFromLeft]
+	animations: { cardIsFaceUp = !cardIsFaceUp }
+	completion: nil
+)
+```
+
+## Dynamic Animation
+
+1. Step 1: create a UIDynamicAnimator
+
+   ```swift
+   var animator = UIDynamicAnimator(referenceView: UIView)
+   // If animating views, all views must be in a view hierarchy wit referenceView at the top
+   ```
+
+2. Step 2: create and add UIDynamicBehavior instances
+
+   ```swift
+   e.g., let gravity = UIGravityBehavior()
+   animator.addBehavior(gravity)
+   e.g., let collider = UICollisionBehavior()
+   animator.addBehavior(collider)
+   ```
+
+3. step 3: add UIDynamicItems to a UIDynamicBehavior
+
+   ```swift
+   let item1: UIDynamicItem = ...//usually a UIView
+   let item2: UIDynamicItem = ...
+   gravity.addItem(item1)
+   collider.addItem(item2)
+   gravity.addItem(item2)
+   // The instance we add an item to them, it starts to take effect
+   ```
+
+UIDynamicItem Protocol
+
+   ```swift
+protocol UIDynamicItem{
+	var bounds: CGRect { get }
+	var center: CGPoint { get set }
+  var transform: CGAffineTransform { get set }
+  var collisionBoundsType: UIDynamicItemCollisionBoundsType { get set }
+  var collisionBoundingPath: UIBezierPath { get set }
+}
+   //UIView implements this
+   
+   //If you change center or transform while the animator is running, you must call this method to make it take effect
+   animator.updateItemUsingCurrentState(item: UIDynamicItem)
+   ```
+
+UIDynamicBehavior
+
+```swift
+func addChildBehavior(UIDynamicBehavior)
+var dynamicAnimator: UIDynamicAnimator?
+func willMove(to: UIDynamicAnimator?)
+
+var action: (()->Void)?
+```
+
+Stasis
+
+```swift
+var delegate: UIDynamicAnimatorDelegate
+
+func dynamicAnimatorDidPause(UIDynamicAnimator)
+
+func dynamicAnimatorWillResume(UIDynamicAnimator)
+```
+
+
 
