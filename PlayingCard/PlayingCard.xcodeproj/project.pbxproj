@@ -15,6 +15,7 @@
 		7239E9AD22E0B5070082A8CB /* PlayingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7239E9AC22E0B5070082A8CB /* PlayingCard.swift */; };
 		7239E9AF22E0BA1B0082A8CB /* PlayingCardDeck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7239E9AE22E0BA1B0082A8CB /* PlayingCardDeck.swift */; };
 		7239E9B122E1594C0082A8CB /* PlayingCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7239E9B022E1594B0082A8CB /* PlayingCardView.swift */; };
+		7262853022E82CD700B17941 /* CardDynamicBehavior.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7262852F22E82CD700B17941 /* CardDynamicBehavior.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 		7239E9AC22E0B5070082A8CB /* PlayingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayingCard.swift; sourceTree = "<group>"; };
 		7239E9AE22E0BA1B0082A8CB /* PlayingCardDeck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayingCardDeck.swift; sourceTree = "<group>"; };
 		7239E9B022E1594B0082A8CB /* PlayingCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayingCardView.swift; sourceTree = "<group>"; };
+		7262852F22E82CD700B17941 /* CardDynamicBehavior.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardDynamicBehavior.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +67,7 @@
 				7239E99B22E0B3A50082A8CB /* Main.storyboard */,
 				7239E99E22E0B3B00082A8CB /* Assets.xcassets */,
 				7239E9A322E0B3B00082A8CB /* Info.plist */,
+				7262852F22E82CD700B17941 /* CardDynamicBehavior.swift */,
 				7239E9AC22E0B5070082A8CB /* PlayingCard.swift */,
 				7239E9AE22E0BA1B0082A8CB /* PlayingCardDeck.swift */,
 				7239E9B022E1594B0082A8CB /* PlayingCardView.swift */,
@@ -152,6 +155,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7262853022E82CD700B17941 /* CardDynamicBehavior.swift in Sources */,
 				7239E99A22E0B3A50082A8CB /* ViewController.swift in Sources */,
 				7239E9AF22E0BA1B0082A8CB /* PlayingCardDeck.swift in Sources */,
 				7239E9AD22E0B5070082A8CB /* PlayingCard.swift in Sources */,

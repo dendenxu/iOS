@@ -1813,9 +1813,32 @@ if let pushBehavior = UIPushBehavior(item: [...], mode: .instantaneous){
 
 ## Failable Initializer
 
-In swift, the initializers won’t return anything. But objective -C does. *In swift, You write* `return nil` *to trigger an initialization failure, you do not use the* `return` keyword to indicate initialization success.
+In swift, the initializers won’t return anything. But objective -C does. In swift, You write `return nil`to trigger an initialization failure, you do not use the `return` keyword to indicate initialization success.
 
 ## Required Initializer
 
 Write the `required` modifier before the definition of a class initializer to indicate that every subclass of the class must implement that initializer.
+
+
+
+## Animation Demo
+
+```swift
+//code to add in CardDynamicBehavior
+
+if let referenceBounds = dynamicAnimator?.referenceView?.bounds {
+  let center = CGPoint(x: referenceBounds.midX, y: referenceBounds.midY)
+  switch (item.center.x, item.center.y) {
+    case let (x,y) where x < center.x && y < center.y:
+    push.angle = (CGFloat.pi/2).drand
+    case let (x,y) where x > center.x && y > center.y:
+    push.angle = CGFloat.pi + (CGFloat.pi/2).drand
+    case let (x,y) where x < center.x && y > center.y:
+    push.angle = CGFloat.pi * 1.5 + (CGFloat.pi/2).drand
+    case let (x,y) where x > center.x && y < center.y:
+    push.angle = CGFloat.pi * 0.5 + (CGFloat.pi/2).drand
+    default: break
+  }
+}
+```
 
