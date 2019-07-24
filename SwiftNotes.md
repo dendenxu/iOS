@@ -1451,7 +1451,6 @@ class ViewController: UIViewController {
         case .ended: PlayingCardView.isFaceUp = !PlayingCardView.isFaceUp
         default: break
         }
-
     }
     @objc func nextCard()
     {
@@ -1741,5 +1740,82 @@ func dynamicAnimatorDidPause(UIDynamicAnimator)
 func dynamicAnimatorWillResume(UIDynamicAnimator)
 ```
 
+This creates a memory cycle.
 
+- pushBehavior has a pointer to the closure
+- the closure has a pointer to the pushBehavior
+
+```swift
+if let pushBehavior = UIPushBehavior(item: [...], mode: .instantaneous){
+  pushBehavior.magnitude = ...
+  pushBehavior.angle = ...
+  pushBehavior.action = {
+    pushBehavior.dynamicAnimator!.removeBehavior(pushBehavior)
+    animator.addBehavior(pushBehavior) // will push right away
+  }
+}
+// its action captures a pointer back to itself
+```
+
+### Aside: Closure Capture
+
+- You can define local variebles on the fly at the start of a closure
+
+  ```swift
+  var foo = { [x = someInstanceOfaClass, y = "Hello"] in 
+    // use x and y here
+            }
+  ```
+
+- These locals can be declared `weak` or `unowned`
+
+  ```swift
+  var foo = { [weak x = someInstanceOf aClass, y = "Hello"] in 
+            // use x and y here
+            }
+  
+  var foo = { [unowned x = someInstanceOfaClass, y = "Hello"] in 
+            // use x and y here, x is not an Optional
+             // if you see x here and it is not in the heap, you will crash
+            }
+  ```
+
+- **A memory leak occurs when a content remains in memory even after its lifecycle has ended.**
+
+- **Closures can cause retain cycles for a single reason: by default, the object that uses them has a strong reference to them.**
+
+- So how to break it useing this little trick
+
+  ```swift
+  class Zerg {
+    // private var foo = { [weak self = self] in self?.bar() }
+    // or for short we can just say:
+    private var foo = { [weak self] in self?.bar()}
+    private func bar() {...}
+  }
+  ```
+
+- How to modify the UIPushBehavior
+
+  ```swift
+  if let pushBehavior = UIPushBehavior(item: [...], mode: .instantaneous){
+    pushBehavior.magnitude = ...
+    pushBehavior.angle = ...
+    pushBehavior.action = {
+     [unowned pushBehavior] in pushBehavior.dynamicAnimator!.removeBehavior(pushBehavior)
+      animator.addBehavior(pushBehavior) // will push right away
+    }
+  }
+  // its action no longer captures pushBehavior.
+  ```
+
+  
+
+## Failable Initializer
+
+In swift, the initializers won’t return anything. But objective -C does. *In swift, You write* `return nil` *to trigger an initialization failure, you do not use the* `return` keyword to indicate initialization success.
+
+## Required Initializer
+
+Write the `required` modifier before the definition of a class initializer to indicate that every subclass of the class must implement that initializer.
 
