@@ -209,7 +209,7 @@ struct Card//every struct gets a free initializer with all its instance variable
 
 ```
 
-## `Concentration`
+## Concentration
 
 - `Model`
   - `Concentraion`负责成对分配卡片，打乱顺序，以及在接收到信息时对卡片做处理
@@ -281,7 +281,7 @@ var indexOfOneAndOnlyFaceUpCard: Int?
 
 
 
-## Arrays Have `Shuffle`
+## Arrays Have Shuffle
 
 ```swift
 //    func shuffle(theArray: [Card]) -> [Card]
@@ -727,7 +727,7 @@ What't the top?
 var view: UIView
 ```
 
-## Initializing a UIView
+## Initializing an UIView
 
 using initializers
 
@@ -1842,3 +1842,363 @@ if let referenceBounds = dynamicAnimator?.referenceView?.bounds {
 }
 ```
 
+### PlayingCard Code Collection
+
+```swift
+//
+//  ViewController.swift
+//  PlayingCard
+//
+//  Created by Xuzh on 2019/7/18.
+//  Copyright © 2019 Xuzh. All rights reserved.
+//
+
+import UIKit
+
+class ViewController: UIViewController {
+
+    var deck = PlayingCardDeck()
+
+    @IBOutlet private var cardViews: [PlayingCardView]!// This is the view thing
+
+  	// Creating dynamic animator for our view controller
+    lazy var animator = UIDynamicAnimator(referenceView: view)
+
+    lazy var cardBehavior = CardDynamicBehavior(in: animator)// See in CardDynamicBehavior.swift
+
+    var cards = [PlayingCard]()// This is the model thing
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+      
+      	// Draw cards out in pairs an temporarily storing them in an array
+        for _ in 1...(cardViews.count + 1) / 2 {
+            if let card = deck.draw() {
+                cards += [card, card]
+            }
+        }
+
+      	// Initializing cardViews:
+      	// 1. setting face down
+      	// 2. gathering infomation from the model
+      	// 3. adding gesture recognizer
+      	// 4. adding the item to dynamic behavior
+        for cardView in cardViews {
+            cardView.isFaceUp = false
+            let card = cards.remove(at: cards.count.arc4random)
+            cardView.rank = card.rank.order
+            cardView.suit = card.suit.rawValue
+            cardView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(flipCard(_:))))
+            cardBehavior.addItem(cardView)
+        }
+    }
+
+  	// cardViews that are face up and not in animation and not out of the box
+    private var faceUpCardViews: [PlayingCardView] {
+        return cardViews.filter {
+            $0.isFaceUp && !$0.isHidden && !($0.alpha == 0) &&
+                !($0.transform == CGAffineTransform.identity.scaledBy(x: 3.0, y: 3.0)) &&
+                !($0.transform == CGAffineTransform.identity.scaledBy(x: 0.1, y: 0.1))
+        }
+    }
+		
+  	// whether the face up cards are an exact match
+    private var faceUpCardViewsMatched: Bool {
+        return faceUpCardViews.count == 2 &&
+            faceUpCardViews[0].rank == faceUpCardViews[1].rank &&
+            faceUpCardViews[0].suit == faceUpCardViews[1].suit
+    }
+		
+  
+  	// for avoiding confliction
+    private var lastChosenCardView: PlayingCardView?
+
+    @objc func flipCard(_ recognizer: UITapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+          	// UITapGestureRecognizer has infomation about the view that triggers it
+          	// Counting face-up cards guarantees that we can't flip a third card
+            if let chosenCardView = recognizer.view as? PlayingCardView, self.faceUpCardViews.count < 2 {
+              	// updating lastChosenCardView
+                lastChosenCardView = chosenCardView
+              	// Stop the dynamic animation of the flipped card when flipping it
+                cardBehavior.removeItem(chosenCardView)
+              
+              	// This is a transition animation
+                UIView.transition(
+                    with: chosenCardView,
+                    duration: 0.6, // Sometimes setting duration longer can help developer detect flaws，如果在此时有第二张卡被翻面，那么他们就都会进入下面的finish阶段，然后保持face up card == 2的状态，于是就会有不好的事情发生 
+                    options: [.curveEaseInOut, .transitionFlipFromBottom],
+                    animations: { chosenCardView.isFaceUp = !chosenCardView.isFaceUp },// We just put what changest the view here
+                    completion: {
+                      	// 这里有可能有一张或者两张face-up card，由于face-up card的筛选机制，已经匹配并消失的卡片不计入face-up card
+                        finished in
+                        let cardsToAnimate = self.faceUpCardViews// 为了避免重复计算，在这里用变量将信息储存
+                        if self.faceUpCardViewsMatched, self.lastChosenCard == chosenCardView {// 如果match了就先变大再变小在消失然后调整大小清洁垃圾。在这句话旁边，我觉得应该也得判断判断lastChosenCard和chosenCardView，但是实际上不判断好像也能正常运行
+                            UIViewPropertyAnimator.runningPropertyAnimator(
+                              	// This is another kind of animator: Property animator
+                              	// Here we use transform
+                                withDuration: 0.6,
+                                delay: 0,
+                                options: [.curveEaseInOut],
+                                animations: {
+                                    cardsToAnimate.forEach {
+                                      	// CGAffineTransform will lead to blur
+                                      	// This it the largening part
+                                        $0.transform = CGAffineTransform.identity.scaledBy(x: 3.0, y: 3.0)
+//                                        $0.frame = $0.frame.zoom(by: 3.0)
+                                    }
+                                },
+//                                completion: {
+//                                    position in
+//                                    cardsToAnimate.forEach {
+//                                        $0.transform = CGAffineTransform.identity
+//                                        $0.frame = $0.frame.zoom(by: 3.0)
+//                                    }
+//                                }
+                                completion: {
+                                    position in
+                                    UIViewPropertyAnimator.runningPropertyAnimator(
+                                        withDuration: 0.75,
+                                        delay: 0,
+                                        options: [.curveEaseInOut],
+                                        animations: {
+                                            cardsToAnimate.forEach {
+                                              	// This is the smalling part
+                                                $0.transform = CGAffineTransform.identity.scaledBy(x: 0.1, y: 0.1)
+                                                $0.alpha = 0
+                                            }
+                                        },
+                                        completion: {
+                                          	// This is the cleaning part
+                                            position in
+                                            cardsToAnimate.forEach {
+                                                $0.isHidden = true
+                                                $0.alpha = 1
+                                                $0.transform = .identity
+                                            }
+                                        }
+                                    )
+                                }
+                            )
+                          // Your two face up card may do the same thing
+                          // leading to disaster.
+                        } else if cardsToAnimate.count == 2 {
+                            if self.lastChosenCardView! == chosenCardView {
+                                cardsToAnimate.forEach {
+                                    chosenCardView in
+                                    UIView.transition(
+                                        with: chosenCardView,
+                                        duration: 0.6,
+                                        options: [.curveEaseInOut, .transitionFlipFromBottom],
+                                        animations: { chosenCardView.isFaceUp = false },
+                                        completion: { finished in self.cardBehavior.addItem(chosenCardView) }
+                                    )
+                                }
+                            }
+                        } else if !chosenCardView.isFaceUp {
+                          	// if not 2, the number of face up card is 1
+                          	// so we add it back to the behaviors
+                            self.cardBehavior.addItem(chosenCardView)
+                          	// One important thing about closure is that:
+                          	// if we have a var storing the closure, the var has a 
+                          	// strong pointer to the closure(since closure is of referencetype)
+                          	// Meanwhile if there exists a self thing inside the closure
+                          	// the closure might holds a strong pointer towards the instance
+                          	// so a memory cycle may form
+                        }
+                    }
+                )
+            }
+        default: break
+        }
+    }
+
+//    @IBOutlet weak var PlayingCardView: PlayingCardView!
+//    {
+//        didSet
+//        {
+//            let swipe = UISwipeGestureRecognizer(target: self, action: #selector(nextCard))
+//            swipe.direction = [.left, .right]
+//            PlayingCardView.addGestureRecognizer(swipe)
+//            let pinch = UIPinchGestureRecognizer(target: PlayingCardView, action: #selector(PlayingCardView.setPlayingCardScale(byPinchGestureRecognizer:)))
+//            PlayingCardView.addGestureRecognizer(pinch)
+//        }
+//    }
+
+//    @IBAction func flipCard(_ sender: UITapGestureRecognizer)
+//    {
+//        switch sender.state
+//        {
+//        case .ended: PlayingCardView.isFaceUp = !PlayingCardView.isFaceUp
+//        default: break
+//        }
+
+//    }
+//    @objc func nextCard()
+//    {
+//        if let card = deck.draw()
+//        {
+//            PlayingCardView.rank = card.rank.order
+//            PlayingCardView.suit = card.suit.rawValue
+//        }
+//    }
+
+}
+
+extension CGFloat {
+    var drand: CGFloat {
+        return CGFloat(drand48() * Double(self))
+    }
+}
+
+```
+
+```swift
+//
+//  CardDynamicBehavior.swift
+//  PlayingCard
+//
+//  Created by Xuzh on 2019/7/24.
+//  Copyright © 2019 Xuzh. All rights reserved.
+//
+
+import UIKit
+
+// Creating this class means we can add child behavior to the object instance
+class CardDynamicBehavior: UIDynamicBehavior {
+
+    lazy var collisionBehavior: UICollisionBehavior = {
+        var behavior = UICollisionBehavior()
+        behavior.translatesReferenceBoundsIntoBoundary = true
+        return behavior
+    }()// This is a lazy var, which requires an init: Cannot use get/set
+
+    lazy var itemBehavior: UIDynamicItemBehavior = {
+        var behavior = UIDynamicItemBehavior()
+        behavior.allowsRotation = false
+        behavior.elasticity = 1.0
+        behavior.resistance = 0
+        return behavior
+    }()
+
+
+  	// When calling this function, the item can be automatically added to the push behavior
+    private func push(_ item: UIDynamicItem) {
+      	// mode can be .instantaneous or .constant
+        let push = UIPushBehavior(items: [item], mode: .instantaneous)
+//        push.angle = (2 * CGFloat.pi).drand
+      
+      	// Pushing towards the center
+        if let referenceBounds = dynamicAnimator?.referenceView?.bounds {
+            let center = CGPoint(x: referenceBounds.midX, y: referenceBounds.midY)
+            switch (item.center.x, item.center.y) {
+            case let (x, y) where x <= center.x && y <= center.y:
+                push.angle = (CGFloat.pi / 2).drand
+            case let (x, y) where x >= center.x && y >= center.y:
+                push.angle = CGFloat.pi + (CGFloat.pi / 2).drand
+            case let (x, y) where x < center.x && y > center.y:
+                push.angle = CGFloat.pi * 1.5 + (CGFloat.pi / 2).drand
+            case let (x, y) where x > center.x && y < center.y:
+                push.angle = CGFloat.pi * 0.5 + (CGFloat.pi / 2).drand
+            default:
+                break
+            }
+        }
+        push.magnitude = CGFloat(1.0) + CGFloat(2.0).drand
+        push.action = {
+          	// BE CAREFUL WITH THIS: A MEMORY CYCLE MAY HAPPEN
+          	// destroying the push behavior after use
+            [unowned push, weak self] in
+            self?.removeChildBehavior(push)
+        }
+        addChildBehavior(push)
+    }
+
+    func addItem(_ item: UIDynamicItem) {
+        collisionBehavior.addItem(item)
+        itemBehavior.addItem(item)
+        push(item)
+    }
+
+    func removeItem(_ item: UIDynamicItem) {
+        collisionBehavior.removeItem(item)
+        itemBehavior.removeItem(item)
+    }
+
+    override init() {
+        super.init()
+        addChildBehavior(collisionBehavior)
+        addChildBehavior(itemBehavior)
+    }
+
+  	// in convenience init, we can easily add behaviors to the animator all in one
+  	// WHICH, IS EXACTLY WHY THIS FILE EXISTS
+    convenience init(in animator: UIDynamicAnimator) {
+        self.init()
+        animator.addBehavior(self)
+    }
+}
+
+```
+
+
+
+## ViewController Life Cycle
+
+- Start of the life cycle:
+
+  CREATION
+
+- What then?
+
+  - Preparation if being segued to
+  - Outlet setting
+  - Appearing and disappearing
+  - Geometry changes
+  - Low-memory situations
+
+- What to do with view controller lifecycle:
+
+  1. Primary Setup
+
+     ```swift
+     override func viewDidLoad() {
+       super.viewDidLoad() // always let super have a chance in lifecycle methods
+       // do the primary set up of the MVC here
+       // good time to update View using Model, for example, because my outlets are set
+     }
+     // DO NOT DO GEOMETRY-RELATED SETUP HERE: BOUNDARYIES NOT SET
+     
+     // And this method can only be called once
+     ```
+
+     ```swift
+     override func viewWillAppear(_ animated: Bool) {
+       super.viewWillAppear(animated)
+       // catch View up to date
+       // maybe network database: time to catch up
+     }
+     // Note that this method can be called repeatedly
+     ```
+
+     ```swift
+     override func viewDidAppear(_ animated: Bool) {
+       super.viewDidAppear(animated)
+       // 
+     }
+     ```
+
+
+## About Context
+
+Each `UIView` has a graphics *context*, and all drawing for the view renders into this context before being transferred to the device’s hardware.
+
+iOS updates the context by calling `draw(_:)` whenever the view needs to be updated. This happens when:
+
+- The view is new to the screen.
+- Other views on top of it are moved.
+- The view’s `hidden` property is changed.
+- Your app explicitly calls the `setNeedsDisplay()` or `setNeedsDisplayInRect()` methods on the view.
+
+> *Note*: Any drawing done in `draw(_:)` goes into the view’s graphics context. Be aware that if you start drawing outside of `draw(_:)`, you’ll have to create your own graphics context.

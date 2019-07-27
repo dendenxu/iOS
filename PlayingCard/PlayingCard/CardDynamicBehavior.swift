@@ -31,9 +31,9 @@ class CardDynamicBehavior: UIDynamicBehavior {
         if let referenceBounds = dynamicAnimator?.referenceView?.bounds {
             let center = CGPoint(x: referenceBounds.midX, y: referenceBounds.midY)
             switch (item.center.x, item.center.y) {
-            case let (x, y) where x < center.x && y < center.y:
+            case let (x, y) where x <= center.x && y <= center.y:
                 push.angle = (CGFloat.pi / 2).drand
-            case let (x, y) where x > center.x && y > center.y:
+            case let (x, y) where x >= center.x && y >= center.y:
                 push.angle = CGFloat.pi + (CGFloat.pi / 2).drand
             case let (x, y) where x < center.x && y > center.y:
                 push.angle = CGFloat.pi * 1.5 + (CGFloat.pi / 2).drand

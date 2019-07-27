@@ -40,21 +40,25 @@ class ViewController: UIViewController {
 
     private var faceUpCardViews: [PlayingCardView] {
         return cardViews.filter {
-            $0.isFaceUp && !$0.isHidden && !($0.alpha == 0) && !($0.transform == CGAffineTransform.identity.scaledBy(x: 3.0, y: 3.0))
+            $0.isFaceUp && !$0.isHidden && !($0.alpha == 0) &&
+                !($0.transform == CGAffineTransform.identity.scaledBy(x: 3.0, y: 3.0)) &&
+                !($0.transform == CGAffineTransform.identity.scaledBy(x: 0.1, y: 0.1))
         }
     }
 
     private var faceUpCardViewsMatched: Bool {
         return faceUpCardViews.count == 2 &&
-            !faceUpCardViews[0].isHidden && !faceUpCardViews[1].isHidden &&
             faceUpCardViews[0].rank == faceUpCardViews[1].rank &&
             faceUpCardViews[0].suit == faceUpCardViews[1].suit
     }
 
+    private var lastChosenCardView: PlayingCardView?
+
     @objc func flipCard(_ recognizer: UITapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let chosenCardView = recognizer.view as? PlayingCardView {
+            if let chosenCardView = recognizer.view as? PlayingCardView, self.faceUpCardViews.count < 2 {
+                lastChosenCardView = chosenCardView
                 cardBehavior.removeItem(chosenCardView)
                 UIView.transition(
                     with: chosenCardView,
@@ -64,11 +68,11 @@ class ViewController: UIViewController {
                     completion: {
                         finished in
                         let cardsToAnimate = self.faceUpCardViews
-                        if self.faceUpCardViewsMatched {
+                        if self.faceUpCardViewsMatched, self.lastChosenCardView! == chosenCardView {
                             UIViewPropertyAnimator.runningPropertyAnimator(
-                                withDuration: 3.0,
+                                withDuration: 0.6,
                                 delay: 0,
-                                options: [],
+                                options: [.curveEaseInOut],
                                 animations: {
                                     cardsToAnimate.forEach {
                                         $0.transform = CGAffineTransform.identity.scaledBy(x: 3.0, y: 3.0)
@@ -85,9 +89,9 @@ class ViewController: UIViewController {
                                 completion: {
                                     position in
                                     UIViewPropertyAnimator.runningPropertyAnimator(
-                                        withDuration: 3.0,
+                                        withDuration: 0.75,
                                         delay: 0,
-                                        options: [],
+                                        options: [.curveEaseInOut],
                                         animations: {
                                             cardsToAnimate.forEach {
                                                 $0.transform = CGAffineTransform.identity.scaledBy(x: 0.1, y: 0.1)
@@ -105,7 +109,7 @@ class ViewController: UIViewController {
                                     )
                                 }
                             )
-                        } else if cardsToAnimate.count == 2 {
+                        } else if cardsToAnimate.count == 2, self.lastChosenCardView! == chosenCardView {
                             cardsToAnimate.forEach {
                                 chosenCardView in
                                 UIView.transition(
@@ -116,6 +120,7 @@ class ViewController: UIViewController {
                                     completion: { finished in self.cardBehavior.addItem(chosenCardView) }
                                 )
                             }
+
                         } else if !chosenCardView.isFaceUp {
                             self.cardBehavior.addItem(chosenCardView)
                         }
