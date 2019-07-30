@@ -1,6 +1,6 @@
-## Concentration Code Collection
+# Notes for Swift & iOS
 
-整理后的代码详见具体文件
+## Concentration Code Collection
 
 ```swift
 //
@@ -2722,6 +2722,292 @@ Zooming:
   var zoomScale: CGFloat
   func setZoomScale(CGFloat, animated: Bool)
   func zoom(to rect: CGRect, animated: Bool)
+  // This makes sure that the rect just barely fits.
+  ```
+```
+  
+
+Delegate method:
+
+​```swift
+func scrollViewDidEndZooming(
+  UIScrollView,
+	with view: UIView,
+  atScale: CGFloat
+)
+
+// Delegate method will notify you when zooming ends.
+// If you redraw, make sure to reset the tarnsform back to identity.
+```
+
+## Multithreading
+
+### Queues
+
+Multithreading is mostly about "queues" in iOS.
+
+Functions (usually closures) are simply lined up in a queue (like at the movies!).
+
+Then those functions are pulled off the queue and executed on an associated thread(s).
+
+Queues can be "serial" (one closure at a time) or "concurrent" (multiple threads servicing it)
+
+
+
+### Main Queue
+
+There is a very special serial queue called the "main queue".
+
+ALL UI ACTIVITY MUST OCCUR ON THIS QUEUE AND THIS QUEUE ONLY
+
+DEFINITELY WANT TO TAKE EXPENSIVE THINGS OUT OF THIS
+
+
+
+### Global Queues
+
+For non-main-queue work, you're usually going to use a shared, global, concurrent queue.
+
+
+
+### Using Queue
+
+Getting a queue
+
+```swift
+let mainQueue = DispatchQueue.
+
+let backgroundQueue = DispatchQueue.global(qos: DispatchQos)
+DispatchQos.userInteractive	// high priority, only do something short and quick
+DispatchQos.userInitiated		// high priority, but might take a little bit of time
+DispatchQos.background			// not directly initiated by user, so can run as slow as needed
+DispatchQos.utility					// long-running background processes, low priority
+```
+
+
+
+Put things in queue
+
+```swift
+// You can just plop a closure onto a queue and keep running on the current queue
+queue.async {...}
+
+// Or you can block the queue waiting until the closure finishes on that other queue
+queue.sync {...}
+```
+
+>When you invoke something synchronously, it means that the thread that initiated that operation will wait for the task to finish before continuing. Asynchronous means that it will not wait.
+
+
+
+Getting non-global queue
+
+- very rarely you might need a queue other than main or global.
+
+  ```swift
+  // Your own serial queue (use this only if you have multiple, serially depedent activities)...
+  let serialQueue = DispatchQueue(label: "MySerialQ")
+  // Your own concurrent queue (rare that you would do this versus global queues)...
+  let concurrentQueue = DispatchQueue(label: "MyConcurrentQ", attributes: .concurrent)
   ```
 
-  
+### Another API
+
+```swift
+OperationQueue and Operation
+// These two supports the "nesting" of dispatching, which is very rare.
+```
+
+
+
+### Example Of Multithreaded iOS API
+
+```swift
+let session = URLSession(configuration: .default)
+if let url = URL(string: "http://www.google.com/...") {
+  let task = session.dataTask(with: url) {
+    (data: Data?, response: URLResponse?, error: Error?) in
+    // Don't do UI things here
+    Dispatch.main.async {
+      // do UI stuff here
+    }
+  }
+  // The task always start out paused
+  task.resume()
+}
+```
+
+and about the timing:
+
+```swift
+a: let session = URLSession(configuration: .default)
+b: if let url = URL(string: "http://www.google.com/...") {
+c:  let task = session.dataTask(with: url) {
+    (data: Data?, response: URLResponse?, error: Error?) in
+d:    // Don't do UI things here
+e:    Dispatch.main.async {
+f:      // do UI stuff here
+    }
+g: 	// do other stuff  
+}
+  // The task always start out paused
+h:  task.resume()
+}
+
+i: // possible order: a b c h i d e g f
+// or: ...
+```
+
+## Cassini Code Collection
+
+### Demo of scrollView and multithreading
+
+```swift
+//
+//  ImageViewController.swift
+//  Cassini
+//
+//  Created by Xuzh on 2019/7/29.
+//  Copyright © 2019 XuZh. All rights reserved.
+//
+
+import UIKit
+
+class ImageViewController: UIViewController, UIScrollViewDelegate
+{
+
+    @IBOutlet weak var scrollView: UIScrollView! {
+        didSet {
+            scrollView.minimumZoomScale = 1/25
+            scrollView.maximumZoomScale = 1.25
+            scrollView.delegate = self
+            scrollView.addSubview(imageView)
+        }
+    }
+    
+    @IBOutlet weak var spinner: UIActivityIndicatorView!
+    
+    private var imageView = UIImageView()
+    
+    private var image: UIImage? {
+        get {
+            return imageView.image
+        }
+        set {
+            imageView.image = newValue
+            imageView.sizeToFit()
+            scrollView?.contentSize = imageView.bounds.size
+            spinner?.stopAnimating()
+        }
+    }
+    
+    var imageURL: URL? = DemoURLs.stanford {
+        didSet {
+            if view.window != nil {
+                fetchImage()
+            }
+        }
+    }
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        return imageView
+    }
+    
+    private func fetchImage() {
+        spinner.startAnimating()
+        if let url = imageURL {
+            DispatchQueue.global(qos: .userInitiated).async {
+                // TODO: terminate this when the image is no longer needed
+                // When user makes another request, I want this fetching terminated. How?
+                let urlContent = try? Data(contentsOf: url)
+                DispatchQueue.main.async { [weak self] in
+                    if let imageData = urlContent, url == self?.imageURL {
+                        self?.image = UIImage(data: imageData)
+                    }
+                }
+            }
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if imageView.image == nil {
+            fetchImage()
+        }
+    }
+    
+}
+```
+
+```swift
+//
+//  CassiniViewController.swift
+//  Cassini
+//
+//  Created by Xuzh on 2019/7/30.
+//  Copyright © 2019 XuZh. All rights reserved.
+//
+
+import UIKit
+
+class CassiniViewController: UIViewController {
+
+
+    // MARK: - Navigation
+
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let identifier = segue.identifier {
+            if let url = DemoURLs.NASA[identifier] {
+                if let imageVC = segue.destination.contents as? ImageViewController {
+                    imageVC.imageURL = url
+                    imageVC.title = (sender as? UIButton)?.currentTitle
+                }
+            }
+        }
+    }
+}
+
+
+extension UIViewController {
+    var contents: UIViewController {
+        if let navcon = self as? UINavigationController {
+            return navcon.visibleViewController ?? self
+        }else {
+            return self
+        }
+    }
+}
+```
+
+```swift
+//
+//  DemoURLs.swift
+//  Cassini
+//
+//  Created by Xuzh on 2019/7/29.
+//  Copyright © 2019 XuZh. All rights reserved.
+//
+
+import Foundation
+
+struct DemoURLs
+{
+    static let stanford = Bundle.main.url(forResource: "Oval", withExtension: "jpg")
+//    static let stanford = URL(string: "https://upload.wikimedia.org/wikipedia/commons/5/55/Stanford_Oval_September_2013_panorama.jpg")
+
+    static var NASA: [String: URL] {
+        let NASAURLStrings = [
+            "Cassini": "https://www.jpl.nasa.gov/images/cassini/20090202/pia03883-full.jpg",
+            "Earth": "https://www.nasa.gov/sites/default/files/wave_earth_mosaic_3.jpg",
+            "Saturn": "https://www.nasa.gov/sites/default/files/saturn_collage.jpg"
+//            "Saturn": "https://cdn.images.express.co.uk/img/dynamic/151/590x/NASA-probed-Saturn-with-its-Cassini-spacecraft-1156016.webp?r=1563714231211"
+        ]
+        var urls = [String: URL]()
+        for (key, value) in NASAURLStrings {
+            urls[key] = URL(string: value)
+        }
+        return urls
+    }
+}
+```
+
