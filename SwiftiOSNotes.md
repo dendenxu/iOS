@@ -2878,13 +2878,22 @@ class ImageViewController: UIViewController, UIScrollViewDelegate
 
     @IBOutlet weak var scrollView: UIScrollView! {
         didSet {
+          	// These three are to be set if you wanna zoom
             scrollView.minimumZoomScale = 1/25
             scrollView.maximumZoomScale = 1.25
-            scrollView.delegate = self
+            // For using the viewForZooming delegate method
+          	scrollView.delegate = self
+          
+          	// And this is how you manually add subview to scrollView
+          	// If you drag something out in the Interface Builder, it's automatically added as the scrollView's subview
             scrollView.addSubview(imageView)
         }
     }
     
+  	// Three things essential about spinner:
+   	// 1. Check the hideIfNotSpinning(?I'm not quite sure) property
+  	// 2. Start the animation using spinner.startAnimating(). After that the spinner spins
+  	// 3. Stop the animation using spinner.stopAnimating(). After that the spinner is hidden
     @IBOutlet weak var spinner: UIActivityIndicatorView!
     
     private var imageView = UIImageView()
@@ -3010,4 +3019,209 @@ struct DemoURLs
     }
 }
 ```
+
+
+
+## Autolayout: Size Class
+
+We use size class to configure different constrains in different device mode:
+
+| Device/Mode | Portrait | Landscape | SplitView      |
+| ----------- | -------- | --------- | -------------- |
+| iPhone      | WCHR     | WCHC      | -              |
+| iPhone Plus | WCHR     | WRHC      | -              |
+| iPad        | WRHR     | WRHR      | Something else |
+
+In the Interface Builder, which can specify some properties differently in different size class in the property inspector.
+
+And in the storyboard, when dealing with constrains, we can click the Vary for Traits button to add different contains in different mode.
+
+Guess in future development, we should firstly focus on creating the essential part of the app.
+
+Then consider adding animation. Because my progress is toooooooo slow!
+
+In code, we can also programmatically add constrains.(even animate them: guess that would be what I'd do: extending flexibility and animating in fancy ways)
+
+### Autolayout Animation
+
+```swift
+UIView.animate(withDuration: 1) {
+  widthConstraint.constant = ...
+  heightConstaint.constant = ...
+  view.layoutIfNeeded() // flush all changes
+}
+UIView.animate(
+  withDuration: 1, 
+  delay: 0, 
+  usingSpringWithDamping: 0.5, 
+  initialSpringVelocity: 0, 
+  options: [], 
+  animations: {
+  topConstraint.constant = ...
+  view.layoutIfNeeded() // flush all changes
+}) { (finished) in }
+```
+
+```swift
+if selected{
+    greenViewWidthConstraint.constant = 0
+    greenGreyHorizontalSpaceConstraint.active = false
+}else{
+    greenViewWidthConstraint.constant = 75
+    greenGreyHorizontalSpaceConstraint.active = true
+}
+UIView.animateWithDuration(0.3){
+    self.view.layoutIfNeeded()
+}
+
+//Horizontal Constraint
+1. redButton width = 75
+2. redButton leading space to superView = 15
+3. redButton trailing space to greenView = 15
+4. greenView width = 75
+5. greenView leading space to redButton = 15
+6. greenView trailing space to greyView = 15
+7. greyView leading space to greenView = 15
+8. greyView trailing space to superView = 15
+9. redButton trailing space to greyView = 15, priority = 999
+```
+
+### Demo Code Collection
+
+```swift
+// in Concentrarion
+// in ConcentraionViewController.swift
+
+private func updateFlipCountLabel() {
+  ...
+  let attributedString = NSAtrributedString(
+  string: traitCollection.verticalSizeClass == .compact ? "Flips\n\(flipCound)" : "Flips: \(flipCount)",
+    attributes: attributes
+  )
+  ...
+}
+
+override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+  super.traitCollectionDidChange(previousTraitCollection)
+  updateFlipCountLabel()
+}
+```
+
+
+
+## Drag and Drop
+
+- Very interoperable way to move data around
+
+  Between apps on iPads and within an app on all iOS 11 devices.
+
+  Your app continues to work normally while dragging an drop is going on.
+
+  
+
+- Interactions
+
+  A view "signs up" to participate in drag and/or drop using an interaction.
+
+  It's kind of like a "gesture recognizer" for drag ans drop.
+
+  ```swift
+  let dragInteraction = UIDragInteraction(delegate: theDelegate)
+  view.addInteraction(drag/dropInteraction)
+  // Now the delegate will get involved if a drag or drop occurs in the view.
+  ```
+
+- Starting a Drag
+
+  ```swift
+  // Now when user does long-press and move, your delegate get:
+  func dragInteraction(_ interaction:UIDragInteraction, itemsForBeginning session: UIDragSession) -> [UIDragItem]
+  // return the item it's willing to have dragged from the view.
+  // returning an empty array means "don't" drag anything after all.
+  
+  // To create a UIDragItem
+  let dragItem = UIDragItem(itemProvider: NSItemProvider(object: provider))
+  ```
+
+  Drag and drop is very async.
+
+  Very lightweight.
+
+  ```swift
+  dragItem.localItem = someItem
+  ```
+
+- Adding to a drag
+
+  Even in the middle of a drag, users can add more to there drag if you implement...
+
+  ```swift
+  func dragInteraction(_ interaction: UIDragInteraction, itemsForAddingTo session: UIDragSession)
+  ```
+
+- Accepting a drop
+
+  ```swift
+  // When a drag moves over a view with a UIDragInteraction, the delegate gets… 
+  func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDragSession) -> Bool
+  // ... at which point the delegate can refuse the drop before it even get started
+  ```
+
+  ```swift
+  // To figure that out, the delegate can ask what kind of objects can be provided...
+  let stringAvailable = session.canLoadObjects(ofClass: NSAttributedString.self)
+  let imageAvailable = session.canLoadObjects(ofClass: UIImage.self)
+  // … and refuse the drop if it's not your liking
+  
+  ```
+
+  ```swift
+  // If you don't refuse it in canHandle: you start getting
+  func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDragSession) -> UIDropProposal
+  // respond with UIDropProposal(operation: .copy/.move/.cancel)
+  // if it matters, session.location(in: view) can be called to find out where the touch is.
+  ```
+
+  ```swift
+  func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession)
+  // In this we do
+  
+  // using NSAttributedString.self means we're getting the class of it(which is something we haven't seen)
+  session.loadObjects(ofClass: NSAttributedString.self) {
+    theStrings in
+  	// do something with the dropped NSAtrributedStrings
+    // need to use as? to cast it
+  }
+  ```
+
+## Table and Collection Views
+
+### UITableView and UICollectionView
+
+UIScrollView subclasses used to display unbounded amounts of information.
+
+- Table View presents the information in a long (possible sectioned) list.
+- Collection View presents the information in a 2D format (usually "flowing" like text flows)
+
+```swift
+// In UITableView
+var dataSource: UITableViewDataSource
+var delegate: UITableViewDelegate
+func numberOfSections(in tableView: UITableView) -> Int
+func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int
+func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+
+// In UICollectionView
+var dataSource: UICollectionViewDataSource
+var delegate: UICollectionViewDelegate
+func numberOfSections(in collectionView: UICollectionView) -> Int
+func tableView(_ collectionView: UICollectionView, numberOfRowsInSection section: Int) -> Int
+func tableView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell
+
+// IndexPath specifies which row/item we're talking about.
+// get the section using IndexPath.section
+// get the row/item using IndexPath.row/item
+```
+
+
 
